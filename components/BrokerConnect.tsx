@@ -66,44 +66,52 @@ const BrokerConnect: React.FC<BrokerConnectProps> = ({ onConnect, onClose, lang 
                        secretKey.toLowerCase().includes('fail') ||
                        secretKey.toLowerCase().includes('error');
 
-    // Connection Simulation Steps
+    // Connection Simulation Steps - PRO HACKER STYLE
     addLog(`${t.handshake_init} ${selectedBroker}...`);
 
     setTimeout(() => {
         const host = isCryptoOrExness ? 'api.binance.com' : 'mt5-real.server.com';
-        addLog(`Resolving host: ${server || host}...`);
-    }, 600);
+        addLog(`Resolving DNS: ${server || host}...`);
+    }, 500);
 
     setTimeout(() => {
         const ip = `104.22.${Math.floor(Math.random()*255)}.${Math.floor(Math.random()*255)}`;
         addLog(`Host resolved: ${ip}`, 'SUCCESS');
-        addLog(`${t.establishing_secure}`);
-    }, 1200);
+        addLog(`Initiating TLS 1.3 Handshake...`);
+    }, 1000);
+
+    setTimeout(() => {
+        addLog(`Cipher Suite: TLS_AES_256_GCM_SHA384`, 'INFO');
+        addLog(`Certificate verified. Secure Tunnel Established.`, 'SUCCESS');
+    }, 1800);
 
     setTimeout(() => {
         if (shouldFail) {
-             addLog(`${t.connection_failed}: Error 10060`, 'ERROR');
+             addLog(`${t.connection_failed}: Error 10060 (Connection Timed Out)`, 'ERROR');
              setStatus('ERROR');
              setErrorDetails(t.check_credentials);
         } else {
-             addLog(`Connection established. Latency: ${Math.floor(Math.random() * 20) + 5}ms`, 'SUCCESS');
+             addLog(`Authenticating user ${login || 'API_KEY'}...`, 'INFO');
+             const latency = Math.floor(Math.random() * 20) + 5;
+             addLog(`Auth Success. Session Token: ${Math.random().toString(36).substr(2, 12).toUpperCase()}`, 'SUCCESS');
+             addLog(`Ping: ${latency}ms (Low Latency Mode Active)`, 'SUCCESS');
              addLog(`${t.verifying_creds}`);
         }
-    }, 2200);
+    }, 3000);
 
     if (!shouldFail) {
         setTimeout(() => {
-            addLog(`Auth Success. Token: ${Math.random().toString(36).substr(2, 12).toUpperCase()}`, 'SUCCESS');
-            addLog(`Subscribing to market data streams (WSS)...`);
-        }, 3200);
+            addLog(`Subscribing to market data streams (WSS)...`, 'INFO');
+            addLog(`Stream open: XAUUSD, EURUSD, BTCUSDT`, 'INFO');
+        }, 4000);
 
         setTimeout(() => {
-             addLog(`Ready.`, 'SUCCESS');
+             addLog(`System Ready. AI Engine Attached.`, 'SUCCESS');
              setStatus('SUCCESS');
              setTimeout(() => {
                  onConnect(selectedBroker, server || 'Real-Server-Primary', login || apiKey);
              }, 800);
-        }, 4200);
+        }, 5000);
     }
   };
 

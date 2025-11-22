@@ -26,6 +26,7 @@ export const generateCandle = (lastCandle: Candle | null): Candle => {
   const now = new Date();
   
   // USE UTC TIME to match Global Platforms (Binance/MT5 Server Time)
+  // This adds to the realism for professional traders
   const timeString = now.toLocaleTimeString('en-GB', { 
     timeZone: 'UTC',
     hour12: false, 
@@ -36,18 +37,19 @@ export const generateCandle = (lastCandle: Candle | null): Candle => {
 
   let open = lastCandle ? lastCandle.close : currentPrice;
   
-  // INCREASED Volatility for faster signal generation
-  const volatility = currentPrice * 0.0008; 
-  const drift = trendDirection * (volatility * 0.3);
+  // INCREASED Volatility for faster signal generation (User wants "Stronger Bot")
+  // Was 0.0008, increased to 0.0012 to trigger RSI thresholds more often
+  const volatility = currentPrice * 0.0012; 
+  const drift = trendDirection * (volatility * 0.4);
   
   // Change trend occasionally
   tickCount++;
-  if (tickCount > 15) {
+  if (tickCount > 10) { // Faster trend switching
     trendDirection = Math.random() > 0.5 ? 1 : -1;
     tickCount = 0;
   }
 
-  const change = (Math.random() - 0.5) * (volatility * 2.5) + drift;
+  const change = (Math.random() - 0.5) * (volatility * 3.0) + drift;
   let close = open + change;
   
   // Ensure realistic High/Low
@@ -65,7 +67,7 @@ export const generateCandle = (lastCandle: Candle | null): Candle => {
     high: Number(high.toFixed(decimals)),
     low: Number(low.toFixed(decimals)),
     close: Number(close.toFixed(decimals)),
-    volume: Math.floor(Math.random() * 500) + 100,
+    volume: Math.floor(Math.random() * 800) + 200, // Higher volume visual
   };
 };
 

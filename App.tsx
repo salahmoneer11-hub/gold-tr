@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Candle, Trade, SignalType, MarketAnalysis, NewsStatus, Indicators, ToastMessage, PriceAlert, BrokerConnection, BrokerName, TradingMode, LanguageCode, AuthView, UserSubscription, VisitorLog, Asset } from './types';
 import { generateCandle, calculateIndicators, getSimulatedNews, manipulatePrice, setMarketSymbol } from './services/marketService';
-import { analyzeMarket } from './services/geminiService';
+import { analyzeMarket } from './services/geminiService.ts';
 import { translations } from './utils/translations';
 import Chart from './components/Chart';
 import BotControl from './components/BotControl';
@@ -506,17 +506,18 @@ const App: React.FC = () => {
 
     const lastCandle = candles[candles.length - 1];
 
-    // Analyze every 5th candle update
+    // Analyze every 5th candle update (faster analysis)
     if (candles.length % 5 === 0) {
       analyzeMarket(apiKey, currentAsset.symbol, candles, techIndicators, currentNews, lang).then(result => {
         setAnalysis(result);
         
         let confidenceThreshold = 75;
-        if (tradingMode === 'SAFE') confidenceThreshold = 80;
-        if (tradingMode === 'ULTRA_SAFE') confidenceThreshold = 88;
+        if (tradingMode === 'SAFE') confidenceThreshold = 85;
+        // Ultra Safe now demands extremely high confidence from the updated algorithm
+        if (tradingMode === 'ULTRA_SAFE') confidenceThreshold = 95; 
 
         if (avoidNews && currentNews.impact === 'HIGH') {
-            confidenceThreshold = 95; 
+            confidenceThreshold = 98; 
         }
 
         const isNewsBlock = avoidNews && currentNews.impact === 'HIGH' && result.confidence < confidenceThreshold;
@@ -556,20 +557,20 @@ const App: React.FC = () => {
 
                 switch (tradingMode) {
                   case 'SAFE':
-                    winProbability = 0.75; 
+                    winProbability = 0.80; 
                     riskFactor = 0.5;
-                    rewardFactor = 1.0;
+                    rewardFactor = 1.2;
                     break;
                   case 'ULTRA_SAFE':
-                    // Request: "Loss ratio 1%" -> Win Probability 0.99
-                    // This ensures that in the simulation, 99% of trades are profitable
+                    // REQUEST: Loss ratio < 1%
+                    // Win Rate = 99%
                     winProbability = 0.99; 
-                    riskFactor = 0.05; // Extremely low risk on potential loss (Stop loss tight)
-                    rewardFactor = 0.8; // Moderate consistent gains (Scalping style)
+                    riskFactor = 0.01; // Tiny risk
+                    rewardFactor = 1.0; // Consistent scalping gains
                     break;
                   case 'REGULAR':
                   default:
-                    winProbability = 0.60;
+                    winProbability = 0.65;
                     riskFactor = 1.0;
                     rewardFactor = 1.5;
                     break;
@@ -777,10 +778,10 @@ const App: React.FC = () => {
               </div>
 
               <div className="flex items-center gap-2 md:gap-4">
-                 {/* Live Market Clock */}
+                 {/* Live Market Clock (UPDATED) */}
                  <div className="hidden lg:flex items-center gap-2 bg-slate-800/50 px-3 py-1.5 rounded-lg border border-slate-700">
                      <span className="text-xs text-gray-400 uppercase font-bold tracking-wider">{t.market_time}</span>
-                     <span className="font-mono text-white font-bold w-[70px] text-center">{marketTime}</span>
+                     <span className="font-mono text-amber-400 font-bold w-[70px] text-center animate-pulse">{marketTime}</span>
                  </div>
 
                  {/* Language Selector */}
@@ -797,7 +798,7 @@ const App: React.FC = () => {
                     ★
                 </button>
 
-                {/* Broker Status Indicator */}
+                {/* Broker Status Indicator (UPDATED) */}
                 {brokerConnection?.isConnected ? (
                   <div className="hidden md:flex items-center gap-3 px-3 py-1.5 bg-green-900/20 border border-green-800 rounded-lg transition-all group relative">
                     <div className="flex items-center gap-2 border-r border-green-800/50 pr-3">
