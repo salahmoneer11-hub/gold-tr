@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
   <head>
@@ -7,6 +8,10 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700&display=swap" rel="stylesheet">
     <style>
+      html, body {
+        height: 100%;
+        margin: 0;
+      }
       body {
         font-family: 'Cairo', sans-serif;
         background-color: #0f172a; /* Slate 900 */
@@ -31,6 +36,9 @@
         backdrop-filter: blur(10px);
         border: 1px solid rgba(255, 255, 255, 0.1);
       }
+      #root {
+        min-height: 100%;
+      }
     </style>
   <script type="importmap">
 {
@@ -45,6 +53,16 @@
 </script>
 </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+        <div style="display: flex; justify-content: center; align-items: center; height: 100vh; background: #0f172a; color: #fbbf24; flex-direction: column;">
+            <svg width="50" height="50" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="currentColor">
+                <circle cx="12" cy="12" r="10" opacity="0.2" />
+                <path d="M12 2C6.48 2 2 6.48 2 12h4c0-3.31 2.69-6 6-6V2z">
+                    <animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur="1s" repeatCount="indefinite" />
+                </path>
+            </svg>
+            <p style="margin-top: 1rem; font-family: 'Cairo', sans-serif;">Loading GoldAI...</p>
+        </div>
+    </div>
   </body>
 </html>

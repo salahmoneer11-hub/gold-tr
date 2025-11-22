@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Candle, Trade, SignalType, MarketAnalysis, NewsStatus, Indicators, ToastMessage, PriceAlert, BrokerConnection, BrokerName, TradingMode, LanguageCode, AuthView, UserSubscription, VisitorLog, Asset } from './types';
 import { generateCandle, calculateIndicators, getSimulatedNews, manipulatePrice, setMarketSymbol } from './services/marketService';
-import { analyzeMarket } from './services/geminiService.ts';
+import { analyzeMarket } from './services/geminiService';
 import { translations } from './utils/translations';
 import Chart from './components/Chart';
 import BotControl from './components/BotControl';

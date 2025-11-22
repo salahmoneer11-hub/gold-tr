@@ -14,6 +14,18 @@ export const analyzeMarket = async (
   language: LanguageCode = 'ar'
 ): Promise<MarketAnalysis> => {
   
+  // Check for empty data to prevent crashes
+  if (!candles || candles.length === 0) {
+      return {
+          signal: SignalType.HOLD,
+          confidence: 0,
+          reasoning: "Insufficient data for analysis",
+          trend: 'SIDEWAYS',
+          support: 0,
+          resistance: 0
+      };
+  }
+
   // Helper: Perform SMART fallback technical analysis when AI is unavailable
   // UPGRADED: Now geared towards "Sniper" accuracy for Ultra Safe Mode
   const performFallbackAnalysis = (errorReason: string): MarketAnalysis => {
@@ -161,7 +173,7 @@ export const analyzeMarket = async (
     };
 
   } catch (error: any) {
-    console.warn("AI Analysis switched to Fallback:", error);
+    console.warn("AI Analysis switched to Fallback due to error:", error);
     
     let reasonAr = "اتصال بطيء - تم استخدام التحليل المحلي";
     let reasonEn = "Slow Connection - Local Analysis Used";
