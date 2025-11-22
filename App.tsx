@@ -46,6 +46,19 @@ const SignalBars = ({ latency }: { latency: number }) => {
     );
 };
 
+// Safe Environment Accessor
+const getSafeEnvApiKey = () => {
+  try {
+    // Check if process exists (Node environment)
+    if (typeof process !== 'undefined' && process.env && process.env.API_KEY) {
+      return process.env.API_KEY;
+    }
+  } catch (e) {
+    // Ignore error in browser environment
+  }
+  return '';
+};
+
 const App: React.FC = () => {
   // Language State
   const [lang, setLang] = useState<LanguageCode>('ar');
@@ -72,7 +85,7 @@ const App: React.FC = () => {
   const [showBrokerConnect, setShowBrokerConnect] = useState(false);
   const [brokerConnection, setBrokerConnection] = useState<BrokerConnection | null>(null);
 
-  const [apiKey, setApiKey] = useState(process.env.API_KEY || '');
+  const [apiKey, setApiKey] = useState(getSafeEnvApiKey());
   const [lotSize, setLotSize] = useState(1.0);
   const [avoidNews, setAvoidNews] = useState(true);
   const [tradingMode, setTradingMode] = useState<TradingMode>('ULTRA_SAFE'); // Default to the strongest mode

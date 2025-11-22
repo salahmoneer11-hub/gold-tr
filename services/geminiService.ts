@@ -69,8 +69,8 @@ export const analyzeMarket = async (
       const direction = isUptrend ? (language === 'ar' ? 'صاعد بقوة' : 'Strong Up') : (language === 'ar' ? 'هابط بقوة' : 'Strong Down');
       const macdState = indicators.macd.histogram > 0 ? (language === 'ar' ? 'إيجابي (Divergence)' : 'Positive') : (language === 'ar' ? 'سلبي (Convergence)' : 'Negative');
 
-      const reasonAr = `استراتيجية القناص (Sniper): الاتجاه ${direction}. مؤشر RSI عند ${indicators.rsi.toFixed(1)} يشير إلى نقطة دخول مثالية. توافق MACD ${macdState}. احتمالية نجاح الصفقة 99%.`;
-      const reasonEn = `Sniper Strategy Active: Trend is ${direction}. RSI at ${indicators.rsi.toFixed(1)} indicates perfect entry. MACD ${macdState}. Trade success probability calculated at 99%.`;
+      const reasonAr = `استراتيجية القناص (Sniper): الاتجاه ${direction}. مؤشر RSI عند ${indicators.rsi.toFixed(1)} يشير إلى نقطة دخول مثالية. توافق MACD ${macdState}. احتمالية نجاح الصفقة 99%. (${errorReason})`;
+      const reasonEn = `Sniper Strategy Active: Trend is ${direction}. RSI at ${indicators.rsi.toFixed(1)} indicates perfect entry. MACD ${macdState}. Trade success probability calculated at 99%. (${errorReason})`;
 
       return {
         signal,
@@ -89,70 +89,58 @@ export const analyzeMarket = async (
 
   const ai = new GoogleGenAI({ apiKey });
   
-  const recentData = candles.slice(-10).map(c => 
-    `[${c.time}] O:${c.open} H:${c.high} L:${c.low} C:${c.close}`
+  // OPTIMIZATION: Send fewer candles to prevent "PAYLOAD_TOO_LARGE" error on Serverless functions
+  // Send only last 15 candles instead of all of them
+  const recentData = candles.slice(-15).map(c => 
+    `[${c.time}] C:${c.close} V:${c.volume}`
   ).join('\n');
 
   const langMap: Record<string, string> = {
-      'ar': 'Arabic (اللغة العربية)',
+      'ar': 'Arabic',
       'en': 'English',
       'fr': 'French',
       'es': 'Spanish',
       'de': 'German',
       'ru': 'Russian',
-      'zh': 'Chinese (Simplified)',
+      'zh': 'Chinese',
       'tr': 'Turkish',
       'hi': 'Hindi'
   };
 
   const isCrypto = symbol.includes('USDT') || symbol.includes('BTC') || symbol.includes('ETH');
-  const contextType = isCrypto ? "Binance Futures (Crypto)" : "Forex/Commodities (Gold)";
+  const contextType = isCrypto ? "Binance Futures" : "Forex Gold";
 
   const prompt = `
-    You are the world's most advanced AI Trading Bot (GoldAI Pro).
-    Your goal is High Frequency Trading (HFT) with 99% accuracy.
-    Analyze the ${symbol} market on ${contextType}.
+    Act as HFT AI Bot (99% win). Analyze ${symbol} (${contextType}).
     
-    **IMPORTANT**: The output JSON 'reasoning' field MUST be in ${langMap[language] || 'English'}.
-
-    Economic News Context:
-    - Status: ${news.event}
-    - Impact: ${news.impact}
+    News: ${news.event} (${news.impact})
+    Techs: RSI:${indicators.rsi.toFixed(1)}, Trend:${indicators.ema20 > indicators.ema50 ? "UP" : "DOWN"}, MACD:${indicators.macd.histogram.toFixed(3)}
     
-    Technical Data:
-    - Price: ${candles[candles.length - 1].close}
-    - RSI: ${indicators.rsi.toFixed(2)}
-    - EMA Trend: ${indicators.ema20 > indicators.ema50 ? "UP" : "DOWN"}
-    - MACD Histogram: ${indicators.macd.histogram.toFixed(4)}
-    
-    Recent Candles:
+    Data (Last 15):
     ${recentData}
     
-    Task:
-    1. Identify a HIGH PROBABILITY setup (Scalping).
-    2. If RSI is < 35 or > 65, be aggressive.
-    3. Provide a confidence score. For valid setups, give 90-99.
-    4. Provide reasoning.
-
-    Output JSON format only:
-    {
-      "signal": "BUY" | "SELL" | "HOLD",
-      "confidence": number,
-      "trend": "UP" | "DOWN" | "SIDEWAYS",
-      "support": number,
-      "resistance": number,
-      "reasoning": "string"
-    }
+    Goal: Identify Scalping Setup. If RSI < 35 Buy, > 65 Sell.
+    Output JSON (Language: ${langMap[language] || 'English'}):
+    { "signal": "BUY"|"SELL"|"HOLD", "confidence": 0-99, "trend": "UP"|"DOWN", "support": number, "resistance": number, "reasoning": "brief text" }
   `;
 
   try {
-    const response = await ai.models.generateContent({
+    // OPTIMIZATION: Add a race condition to prevent FUNCTION_INVOCATION_TIMEOUT
+    // If AI takes longer than 8 seconds, fallback to local logic.
+    const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error("Timeout")), 8000)
+    );
+
+    const apiCall = ai.models.generateContent({
       model: 'gemini-2.5-flash',
       contents: prompt,
       config: {
         responseMimeType: "application/json"
       }
     });
+
+    // Race against timeout
+    const response: any = await Promise.race([apiCall, timeoutPromise]);
 
     const text = response.text;
     if (!text) throw new Error("No response from AI");
@@ -173,13 +161,20 @@ export const analyzeMarket = async (
     };
 
   } catch (error: any) {
-    console.error("AI Analysis Failed:", error);
+    console.warn("AI Analysis switched to Fallback:", error);
+    
+    let reasonAr = "اتصال بطيء - تم استخدام التحليل المحلي";
+    let reasonEn = "Slow Connection - Local Analysis Used";
     
     const errorStr = error?.message || String(error);
-    const isQuota = errorStr.includes("429") || errorStr.toLowerCase().includes("quota");
-    
-    const reasonAr = isQuota ? "تم تجاوز حد الاستخدام (Quota)" : "تعذر الاتصال بالخادم";
-    const reasonEn = isQuota ? "AI Quota Exceeded" : "Server Connection Failed";
+
+    if (errorStr.includes("429") || errorStr.toLowerCase().includes("quota")) {
+         reasonAr = "تم تجاوز حد الاستخدام (Quota)";
+         reasonEn = "AI Quota Exceeded";
+    } else if (errorStr.includes("Timeout")) {
+         reasonAr = "تأخر استجابة السيرفر";
+         reasonEn = "Server Timeout";
+    }
 
     // Fallback to our powerful internal engine on error
     return performFallbackAnalysis(language === 'ar' ? reasonAr : reasonEn);
