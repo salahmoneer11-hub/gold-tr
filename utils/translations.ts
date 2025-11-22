@@ -138,7 +138,13 @@ export const translations: Record<LanguageCode, any> = {
     category_commodity: "سلع (الذهب)",
     category_crypto: "كريبتو (Binance)",
     current_price: "السعر الحالي",
-    market_time: "توقيت السوق (UTC)"
+    market_time: "توقيت السوق (UTC)",
+    connection_failed: "فشل الاتصال",
+    check_credentials: "تحقق من بيانات الاعتماد أو حالة الخادم",
+    server_maintenance: "الخادم تحت الصيانة",
+    establishing_secure: "إنشاء اتصال آمن (TLS 1.3)...",
+    handshake_init: "بدء المصافحة مع",
+    verifying_creds: "التحقق من البيانات..."
   },
   en: {
     app_title: "GOLD AI PRO",
@@ -274,7 +280,13 @@ We are not liable for connection issues.`,
     category_commodity: "Commodities (Gold)",
     category_crypto: "Crypto (Binance)",
     current_price: "Current Price",
-    market_time: "Market Time (UTC)"
+    market_time: "Market Time (UTC)",
+    connection_failed: "Connection Failed",
+    check_credentials: "Check your credentials or server status.",
+    server_maintenance: "Server under maintenance",
+    establishing_secure: "Establishing Secure Channel (TLS 1.3)...",
+    handshake_init: "Initializing handshake with",
+    verifying_creds: "Verifying credentials..."
   },
   fr: {
     app_title: "GOLD AI PRO",
@@ -400,7 +412,13 @@ We are not liable for connection issues.`,
     category_commodity: "Matières premières (Or)",
     category_crypto: "Crypto (Binance)",
     current_price: "Prix Actuel",
-    market_time: "Heure du Marché (UTC)"
+    market_time: "Heure du Marché (UTC)",
+    connection_failed: "Échec de connexion",
+    check_credentials: "Vérifiez vos identifiants",
+    server_maintenance: "Maintenance du serveur",
+    establishing_secure: "Établissement canal sécurisé...",
+    handshake_init: "Initialisation...",
+    verifying_creds: "Vérification..."
   },
   es: {
     app_title: "GOLD AI PRO",
@@ -526,7 +544,13 @@ We are not liable for connection issues.`,
     category_commodity: "Materias primas (Oro)",
     category_crypto: "Cripto (Binance)",
     current_price: "Precio Actual",
-    market_time: "Hora del Mercado (UTC)"
+    market_time: "Hora del Mercado (UTC)",
+    connection_failed: "Conexión Fallida",
+    check_credentials: "Compruebe sus credenciales",
+    server_maintenance: "Servidor en mantenimiento",
+    establishing_secure: "Estableciendo conexión segura...",
+    handshake_init: "Iniciando...",
+    verifying_creds: "Verificando..."
   },
   de: {
     app_title: "GOLD AI PRO",
@@ -652,7 +676,13 @@ We are not liable for connection issues.`,
     category_commodity: "Rohstoffe (Gold)",
     category_crypto: "Krypto (Binance)",
     current_price: "Aktueller Preis",
-    market_time: "Marktzeit (UTC)"
+    market_time: "Marktzeit (UTC)",
+    connection_failed: "Verbindung fehlgeschlagen",
+    check_credentials: "Überprüfen Sie Ihre Anmeldeinformationen",
+    server_maintenance: "Server wird gewartet",
+    establishing_secure: "Sichere Verbindung herstellen...",
+    handshake_init: "Initialisiere...",
+    verifying_creds: "Überprüfe..."
   },
   ru: {
     app_title: "GOLD AI PRO",
@@ -778,7 +808,13 @@ We are not liable for connection issues.`,
     category_commodity: "Товары (Золото)",
     category_crypto: "Крипто (Binance)",
     current_price: "Текущая цена",
-    market_time: "Рыночное время (UTC)"
+    market_time: "Рыночное время (UTC)",
+    connection_failed: "Ошибка подключения",
+    check_credentials: "Проверьте данные или статус сервера",
+    server_maintenance: "Сервер на обслуживании",
+    establishing_secure: "Установка защищенного канала...",
+    handshake_init: "Инициализация...",
+    verifying_creds: "Проверка..."
   },
   zh: {
     app_title: "GOLD AI PRO",
@@ -904,7 +940,13 @@ We are not liable for connection issues.`,
     category_commodity: "商品 (黄金)",
     category_crypto: "加密货币 (Binance)",
     current_price: "当前价格",
-    market_time: "市场时间 (UTC)"
+    market_time: "市场时间 (UTC)",
+    connection_failed: "连接失败",
+    check_credentials: "检查凭据或服务器状态",
+    server_maintenance: "服务器维护中",
+    establishing_secure: "建立安全连接...",
+    handshake_init: "初始化...",
+    verifying_creds: "验证中..."
   },
   tr: {
     app_title: "GOLD AI PRO",
@@ -1030,7 +1072,13 @@ We are not liable for connection issues.`,
     category_commodity: "Emtia (Altın)",
     category_crypto: "Kripto (Binance)",
     current_price: "Güncel Fiyat",
-    market_time: "Piyasa Saati (UTC)"
+    market_time: "Piyasa Saati (UTC)",
+    connection_failed: "Bağlantı Hatası",
+    check_credentials: "Kimlik bilgilerinizi kontrol edin",
+    server_maintenance: "Sunucu bakımda",
+    establishing_secure: "Güvenli bağlantı kuruluyor...",
+    handshake_init: "Başlatılıyor...",
+    verifying_creds: "Doğrulanıyor..."
   },
   hi: {
     app_title: "GOLD AI PRO",
@@ -1156,6 +1204,12 @@ We are not liable for connection issues.`,
     category_commodity: "माल (सोना)",
     category_crypto: "क्रिप्टो (Binance)",
     current_price: "वर्तमान कीमत",
-    market_time: "बाजार का समय (UTC)"
+    market_time: "बाजार का समय (UTC)",
+    connection_failed: "कनेक्शन विफल",
+    check_credentials: "क्रेडेंशियल की जाँच करें",
+    server_maintenance: "सर्वर रखरखाव",
+    establishing_secure: "सुरक्षित चैनल स्थापित कर रहा है...",
+    handshake_init: "हैंडशेक शुरू...",
+    verifying_creds: "सत्यापन..."
   }
 };

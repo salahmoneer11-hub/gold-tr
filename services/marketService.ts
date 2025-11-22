@@ -26,7 +26,6 @@ export const generateCandle = (lastCandle: Candle | null): Candle => {
   const now = new Date();
   
   // USE UTC TIME to match Global Platforms (Binance/MT5 Server Time)
-  // This ensures the chart looks "Live" regardless of user timezone
   const timeString = now.toLocaleTimeString('en-GB', { 
     timeZone: 'UTC',
     hour12: false, 
@@ -37,19 +36,18 @@ export const generateCandle = (lastCandle: Candle | null): Candle => {
 
   let open = lastCandle ? lastCandle.close : currentPrice;
   
-  // Simulate Random Walk with Drift
-  // Volatility should be relative to price (e.g. 0.05% per candle)
-  const volatility = currentPrice * 0.0005; 
-  const drift = trendDirection * (volatility * 0.2);
+  // INCREASED Volatility for faster signal generation
+  const volatility = currentPrice * 0.0008; 
+  const drift = trendDirection * (volatility * 0.3);
   
   // Change trend occasionally
   tickCount++;
-  if (tickCount > 20) {
+  if (tickCount > 15) {
     trendDirection = Math.random() > 0.5 ? 1 : -1;
     tickCount = 0;
   }
 
-  const change = (Math.random() - 0.5) * (volatility * 2) + drift;
+  const change = (Math.random() - 0.5) * (volatility * 2.5) + drift;
   let close = open + change;
   
   // Ensure realistic High/Low
@@ -59,9 +57,6 @@ export const generateCandle = (lastCandle: Candle | null): Candle => {
   // Update global reference
   currentPrice = close;
 
-  // Decimal precision depends on price
-  // Gold/Crypto > 1000 -> 2 decimals
-  // Crypto < 10 -> 4 decimals
   const decimals = currentPrice < 10 ? 4 : 2;
 
   return {
@@ -88,10 +83,8 @@ const calculateEMAArray = (values: number[], period: number): number[] => {
   if (values.length < period) return values; // Not enough data
 
   // Fill initial empty spots or handle logic to align with array length
-  // Simplified: calculate step by step
   let currentEma = values[0]; 
   
-  // Proper loop
   for (let i = 0; i < values.length; i++) {
     if (i === 0) {
       emaArray.push(values[0]);
@@ -134,7 +127,7 @@ export const calculateIndicators = (data: Candle[]): Indicators => {
   
   // Calculate RSI series for StochRSI
   const rsiSeries: number[] = [];
-  // Fill first 13 with approx (not accurate but needed for array alignment)
+  // Fill first 13 with approx
   for(let i=0; i<13; i++) rsiSeries.push(50); 
 
   for (let i = 14; i < len; i++) {
@@ -161,7 +154,6 @@ export const calculateIndicators = (data: Candle[]): Indicators => {
   // 3. MACD
   const macdLine = ema12Array[len - 1] - ema26Array[len - 1];
   // Calculate MACD Signal (9-period EMA of MACD Line)
-  // We need the history of MACD line
   const macdHistory: number[] = [];
   for(let i=0; i<len; i++) {
       macdHistory.push(ema12Array[i] - ema26Array[i]);
@@ -171,7 +163,6 @@ export const calculateIndicators = (data: Candle[]): Indicators => {
   const histogram = macdLine - signalLine;
 
   // 4. Stochastic RSI
-  // StochRSI = (currentRSI - minRSI) / (maxRSI - minRSI)
   const stochPeriod = 14;
   const rsiSlice = rsiSeries.slice(-stochPeriod);
   const minRsi = Math.min(...rsiSlice);
@@ -180,10 +171,8 @@ export const calculateIndicators = (data: Candle[]): Indicators => {
       ? (rsiSlice[rsiSlice.length - 1] - minRsi) / (maxRsi - minRsi) 
       : 0.5;
   
-  // Simplified K & D (Just raw and smoothed raw)
   const k = stochRaw * 100; 
-  // D is usually SMA(3) of K. Simulating with weighted previous
-  const d = k * 0.7 + 30 * 0.3; // approximate for stability in short data
+  const d = k * 0.7 + 30 * 0.3; 
 
   return {
     rsi: isNaN(currentRSI) ? 50 : currentRSI,
@@ -204,7 +193,6 @@ export const calculateIndicators = (data: Candle[]): Indicators => {
 
 export const getSimulatedNews = (): NewsStatus => {
   const rand = Math.random();
-  // 15% chance of High Impact news, 20% Medium, rest None
   if (rand > 0.85) return { impact: 'HIGH', event: '🔴 BREAKING: High Volatility Expected' };
   if (rand > 0.65) return { impact: 'MEDIUM', event: '🟠 Market Update: Medium Impact News' };
   return { impact: 'NONE', event: '🟢 Market Stable' };

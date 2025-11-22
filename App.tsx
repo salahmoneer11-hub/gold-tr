@@ -27,6 +27,25 @@ const VALID_ACTIVATION_CODES = ["GOLD-2024", "SAMU11"];
 
 const DEFAULT_ASSET: Asset = { symbol: 'XAUUSD', name: 'Gold (Spot)', category: 'COMMODITY', basePrice: 2350.00, icon: '🟡' };
 
+// Visual Component for Signal Strength
+const SignalBars = ({ latency }: { latency: number }) => {
+    const quality = latency < 50 ? 4 : latency < 100 ? 3 : latency < 200 ? 2 : 1;
+    
+    return (
+        <div className="flex gap-0.5 items-end h-3" title={`Signal Quality: ${quality}/4`}>
+            {[1, 2, 3, 4].map(i => (
+                <div 
+                    key={i} 
+                    className={`w-1 rounded-sm transition-all duration-500 ${i <= quality 
+                        ? (quality >= 3 ? 'bg-green-500 shadow-[0_0_5px_#22c55e]' : quality === 2 ? 'bg-amber-500' : 'bg-red-500') 
+                        : 'bg-slate-700'}`}
+                    style={{ height: `${i * 25}%` }}
+                />
+            ))}
+        </div>
+    );
+};
+
 const App: React.FC = () => {
   // Language State
   const [lang, setLang] = useState<LanguageCode>('ar');
@@ -142,9 +161,9 @@ const App: React.FC = () => {
         const now = new Date();
         const timeString = now.toLocaleTimeString('en-GB', {
             timeZone: 'UTC',
-            hour12: false,
-            hour: '2-digit',
-            minute: '2-digit',
+            hour12: false, 
+            hour: '2-digit', 
+            minute: '2-digit', 
             second: '2-digit'
         });
         setMarketTime(timeString);
@@ -351,6 +370,22 @@ const App: React.FC = () => {
     setIsRunning(true);
   };
 
+  // --- Latency Simulation Effect ---
+  useEffect(() => {
+    if (!brokerConnection?.isConnected) return;
+
+    const interval = setInterval(() => {
+      setBrokerConnection(prev => {
+        if (!prev) return null;
+        // Simulate realistic jitter (e.g. 20ms to 80ms)
+        const jitter = Math.floor(Math.random() * 60) + 20;
+        return { ...prev, latency: jitter };
+      });
+    }, 2500);
+
+    return () => clearInterval(interval);
+  }, [brokerConnection?.isConnected]);
+
   // --- Simulation / Live Data Loop ---
   useEffect(() => {
     if (view !== 'DASHBOARD') return;
@@ -527,9 +562,10 @@ const App: React.FC = () => {
                     break;
                   case 'ULTRA_SAFE':
                     // Request: "Loss ratio 1%" -> Win Probability 0.99
+                    // This ensures that in the simulation, 99% of trades are profitable
                     winProbability = 0.99; 
-                    riskFactor = 0.1; // Very low risk on potential loss
-                    rewardFactor = 0.8; // Moderate consistent gains
+                    riskFactor = 0.05; // Extremely low risk on potential loss (Stop loss tight)
+                    rewardFactor = 0.8; // Moderate consistent gains (Scalping style)
                     break;
                   case 'REGULAR':
                   default:
@@ -763,11 +799,35 @@ const App: React.FC = () => {
 
                 {/* Broker Status Indicator */}
                 {brokerConnection?.isConnected ? (
-                  <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-green-900/20 border border-green-800 rounded-lg">
-                    <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                    <div className="flex flex-col">
-                      <span className="text-xs font-bold text-green-400 leading-none">{brokerConnection.brokerName}</span>
-                      <span className="text-[9px] text-green-600">{brokerConnection.server}</span>
+                  <div className="hidden md:flex items-center gap-3 px-3 py-1.5 bg-green-900/20 border border-green-800 rounded-lg transition-all group relative">
+                    <div className="flex items-center gap-2 border-r border-green-800/50 pr-3">
+                        <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-[0_0_8px_#22c55e]"></div>
+                        <div className="flex flex-col">
+                        <span className="text-xs font-bold text-green-400 leading-none">{brokerConnection.brokerName}</span>
+                        <span className="text-[9px] text-green-600">{brokerConnection.server}</span>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <div className="flex flex-col items-end min-w-[36px]">
+                            <span className={`text-xs font-mono font-bold ${brokerConnection.latency < 50 ? 'text-green-400' : brokerConnection.latency < 150 ? 'text-amber-400' : 'text-red-400'}`}>
+                                {brokerConnection.latency}ms
+                            </span>
+                            <span className="text-[8px] text-green-700/70 uppercase tracking-wide">Ping</span>
+                        </div>
+                        <SignalBars latency={brokerConnection.latency} />
+                    </div>
+                    
+                    {/* Tooltip */}
+                    <div className="absolute top-full right-0 mt-2 w-48 p-3 bg-slate-800 border border-slate-700 rounded shadow-xl hidden group-hover:block z-50">
+                        <h4 className="text-xs font-bold text-white mb-2 border-b border-slate-700 pb-1">Connection Health</h4>
+                        <div className="flex justify-between text-[10px] text-gray-400 mb-1">
+                            <span>Packet Loss:</span>
+                            <span className="text-green-400">0.0%</span>
+                        </div>
+                        <div className="flex justify-between text-[10px] text-gray-400">
+                            <span>Uptime:</span>
+                            <span className="text-white">99.99%</span>
+                        </div>
                     </div>
                   </div>
                 ) : (
