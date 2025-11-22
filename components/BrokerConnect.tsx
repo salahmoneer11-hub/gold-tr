@@ -15,7 +15,7 @@ const BrokerConnect: React.FC<BrokerConnectProps> = ({ onConnect, onClose, lang 
   const [login, setLogin] = useState('');
   const [password, setPassword] = useState('');
   
-  // For Crypto/Exness APIs
+  // For Crypto/Exness/Other APIs
   const [apiKey, setApiKey] = useState('');
   const [secretKey, setSecretKey] = useState('');
 
@@ -33,7 +33,8 @@ const BrokerConnect: React.FC<BrokerConnectProps> = ({ onConnect, onClose, lang 
     scrollToBottom();
   }, [logs]);
 
-  const isCryptoOrExness = ['BINANCE', 'OKX', 'BYBIT', 'EXNESS'].includes(selectedBroker);
+  // Grouping brokers that typically use API Key/Secret or Tokens instead of pure Server/Login/Pass
+  const isApiBased = ['BINANCE', 'OKX', 'BYBIT', 'EXNESS', 'OANDA', 'INTERACTIVE_BROKERS', 'FOREX_COM'].includes(selectedBroker);
 
   const addLog = (msg: string, type: 'INFO' | 'SUCCESS' | 'ERROR' | 'WARN' = 'INFO') => {
       const time = new Date().toLocaleTimeString('en-US', {
@@ -70,7 +71,7 @@ const BrokerConnect: React.FC<BrokerConnectProps> = ({ onConnect, onClose, lang 
     addLog(`${t.handshake_init} ${selectedBroker}...`);
 
     setTimeout(() => {
-        const host = isCryptoOrExness ? 'api.binance.com' : 'mt5-real.server.com';
+        const host = isApiBased ? 'api.gateway.financial' : 'mt5-real.server.com';
         addLog(`Resolving DNS: ${server || host}...`);
     }, 500);
 
@@ -91,7 +92,7 @@ const BrokerConnect: React.FC<BrokerConnectProps> = ({ onConnect, onClose, lang 
              setStatus('ERROR');
              setErrorDetails(t.check_credentials);
         } else {
-             addLog(`Authenticating user ${login || 'API_KEY'}...`, 'INFO');
+             addLog(`Authenticating user ${login || 'API_CLIENT'}...`, 'INFO');
              const latency = Math.floor(Math.random() * 20) + 5;
              addLog(`Auth Success. Session Token: ${Math.random().toString(36).substr(2, 12).toUpperCase()}`, 'SUCCESS');
              addLog(`Ping: ${latency}ms (Low Latency Mode Active)`, 'SUCCESS');
@@ -109,11 +110,15 @@ const BrokerConnect: React.FC<BrokerConnectProps> = ({ onConnect, onClose, lang 
              addLog(`System Ready. AI Engine Attached.`, 'SUCCESS');
              setStatus('SUCCESS');
              setTimeout(() => {
-                 onConnect(selectedBroker, server || 'Real-Server-Primary', login || apiKey);
+                 onConnect(selectedBroker, server || `${selectedBroker}-Real`, login || apiKey);
              }, 800);
         }, 5000);
     }
   };
+
+  const brokersList: BrokerName[] = [
+      'META_TRADER_5', 'EXNESS', 'OANDA', 'INTERACTIVE_BROKERS', 'FOREX_COM', 'BINANCE', 'OKX', 'BYBIT'
+  ];
 
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -146,14 +151,14 @@ const BrokerConnect: React.FC<BrokerConnectProps> = ({ onConnect, onClose, lang 
             
             <div>
               <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">{t.platform}</label>
-              <div className="grid grid-cols-3 gap-2">
-                {(['META_TRADER_5', 'EXNESS', 'BINANCE', 'OKX', 'BYBIT'] as BrokerName[]).map((b) => (
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                {brokersList.map((b) => (
                   <button
                     key={b}
                     type="button"
                     disabled={status === 'CONNECTING'}
                     onClick={() => setSelectedBroker(b)}
-                    className={`px-2 py-2 rounded border text-[10px] font-bold transition flex flex-col items-center justify-center gap-1 h-16
+                    className={`px-2 py-2 rounded border text-[9px] font-bold transition flex flex-col items-center justify-center gap-1 h-16
                       ${selectedBroker === b 
                         ? 'bg-amber-500 text-black border-amber-500 shadow-lg shadow-amber-500/20' 
                         : 'bg-slate-700 text-slate-300 border-slate-600 hover:border-slate-500'}
@@ -163,18 +168,21 @@ const BrokerConnect: React.FC<BrokerConnectProps> = ({ onConnect, onClose, lang 
                     <span className="text-base">
                        {b === 'META_TRADER_5' && '🟢'}
                        {b === 'EXNESS' && '🟡'}
-                       {b === 'BINANCE' && '🟡'}
+                       {b === 'BINANCE' && '🔶'}
                        {b === 'OKX' && '⚫'}
                        {b === 'BYBIT' && '⚫'}
+                       {b === 'OANDA' && '⚪'}
+                       {b === 'INTERACTIVE_BROKERS' && '🔴'}
+                       {b === 'FOREX_COM' && '🔵'}
                     </span>
-                    {b.replace('_', ' ')}
+                    <span className="text-center leading-tight">{b.replace(/_/g, ' ').replace('INTERACTIVE', 'IBKR')}</span>
                   </button>
                 ))}
               </div>
             </div>
 
-            {!isCryptoOrExness ? (
-                // MT5 Fields
+            {!isApiBased ? (
+                // MT5 Fields (Legacy Server/Login/Pass)
                 <>
                     <div>
                         <label className="block text-sm font-medium text-slate-300 mb-1">{t.server}</label>
@@ -214,10 +222,10 @@ const BrokerConnect: React.FC<BrokerConnectProps> = ({ onConnect, onClose, lang 
                     </div>
                 </>
             ) : (
-                // Crypto/Exness API Fields
+                // Crypto/OANDA/IBKR API Fields
                 <>
                     <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-1">{t.api_key}</label>
+                        <label className="block text-sm font-medium text-slate-300 mb-1">{t.api_key} {selectedBroker === 'OANDA' ? '/ Access Token' : ''}</label>
                         <input 
                             type="text" 
                             value={apiKey}
@@ -229,7 +237,7 @@ const BrokerConnect: React.FC<BrokerConnectProps> = ({ onConnect, onClose, lang 
                         />
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-1">{t.secret_key}</label>
+                        <label className="block text-sm font-medium text-slate-300 mb-1">{t.secret_key} {selectedBroker === 'OANDA' ? '/ Account ID' : ''}</label>
                         <input 
                             type="password" 
                             value={secretKey}

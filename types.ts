@@ -23,7 +23,7 @@ export interface Trade {
   profit: number;
   timestamp: number;
   status: 'OPEN' | 'CLOSED';
-  symbol: string; // Added symbol tracking
+  symbol: string;
 }
 
 export interface Indicators {
@@ -83,7 +83,7 @@ export interface PriceAlert {
   symbol: string;
 }
 
-export type BrokerName = 'META_TRADER_5' | 'EXNESS' | 'BINANCE' | 'OKX' | 'BYBIT';
+export type BrokerName = 'META_TRADER_5' | 'EXNESS' | 'BINANCE' | 'OKX' | 'BYBIT' | 'OANDA' | 'INTERACTIVE_BROKERS' | 'FOREX_COM';
 
 export interface BrokerConnection {
   isConnected: boolean;
@@ -129,4 +129,22 @@ export interface Asset {
   category: AssetCategory;
   basePrice: number;
   icon: string;
+}
+
+export type Timeframe = '1m' | '5m' | '15m' | '30m' | '1h' | '4h' | '1d' | '1w' | '1M';
+export type ChartType = 'AREA' | 'CANDLE';
+
+export type UserStatus = 'ACTIVE' | 'PENDING' | 'BANNED';
+
+export interface UserEntity {
+  id: string;
+  email: string;
+  status: UserStatus;
+  balance: number;
+  totalProfit: number;
+  isOnline: boolean;
+  lastLogin: number;
+  plan: string;
+  ip: string;
+  location: string;
 }

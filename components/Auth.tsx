@@ -6,7 +6,7 @@ import { translations } from '../utils/translations';
 import LanguageSelector from './LanguageSelector';
 
 interface LoginProps {
-  onLogin: (email: string) => void;
+  onLogin: (email: string) => boolean; // Changed to return boolean
   onRegisterClick: () => void;
   onForgotPassword: () => void;
   lang: LanguageCode;
@@ -23,8 +23,9 @@ export const Login: React.FC<LoginProps> = ({ onLogin, onRegisterClick, onForgot
     e.preventDefault();
     setLoading(true);
     setTimeout(() => {
+        const success = onLogin(email);
         setLoading(false);
-        onLogin(email);
+        // If success, parent handles view change. If fail, we stay here.
     }, 1500);
   };
 
@@ -111,7 +112,6 @@ export const Register: React.FC<RegisterProps> = ({ onRegister, onLoginClick, la
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if(password !== confirmPassword) {
-      // In a real app, show error
       return;
     }
     setLoading(true);
@@ -202,7 +202,6 @@ export const Activation: React.FC<ActivationProps> = ({ onActivate, onBack, lang
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    // Simulate API check
     setTimeout(() => {
         setLoading(false);
         onActivate(code);
