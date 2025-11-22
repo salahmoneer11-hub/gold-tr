@@ -1,10 +1,9 @@
 
 import React from 'react';
-import { SignalType, LanguageCode, UserEntity } from '../types';
+import { LanguageCode, UserEntity } from '../types';
 import { translations } from '../utils/translations';
 
 interface AdminPanelProps {
-  onForceSignal: (type: SignalType) => void;
   onResetBalance: () => void;
   users: UserEntity[];
   onUpdateUserStatus: (email: string, status: 'ACTIVE' | 'BANNED' | 'PENDING') => void;
@@ -13,7 +12,7 @@ interface AdminPanelProps {
 }
 
 const AdminPanel: React.FC<AdminPanelProps> = ({ 
-    onForceSignal, onResetBalance, 
+    onResetBalance, 
     users, onUpdateUserStatus, onDeleteUser,
     lang 
 }) => {

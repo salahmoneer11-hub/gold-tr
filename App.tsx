@@ -93,10 +93,17 @@ const App: React.FC = () => {
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const [showSubManagement, setShowSubManagement] = useState(false);
   
-  // Admin User Management State
+  // Admin User Management State - SAFE INITIALIZATION
   const [allUsers, setAllUsers] = useState<UserEntity[]>(() => {
-      const saved = localStorage.getItem('gold_ai_users_db_v2');
-      return saved ? JSON.parse(saved) : generateMockUsers();
+      try {
+        const saved = localStorage.getItem('gold_ai_users_db_v2');
+        // Ensure parsed data is an array, otherwise fallback
+        const parsed = saved ? JSON.parse(saved) : null;
+        return Array.isArray(parsed) ? parsed : generateMockUsers();
+      } catch (error) {
+        console.error("Critical: Failed to load user database, resetting...", error);
+        return generateMockUsers();
+      }
   });
 
   // Broker State
@@ -156,25 +163,29 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    const termsAccepted = localStorage.getItem('gold_ai_terms_accepted');
-    if (termsAccepted !== 'true') {
-      setView('TERMS');
-      return;
-    }
-    const savedUser = localStorage.getItem('gold_ai_user_email');
-    if (savedUser) {
-        // Auto-login check status
-        const user = allUsers.find(u => u.email === savedUser);
-        if (user && (user.status === 'ACTIVE' || user.email === ADMIN_EMAIL)) {
-            setCurrentUser(savedUser);
-            updateUserOnlineStatus(savedUser, true);
-            setView('DASHBOARD');
+    try {
+        const termsAccepted = localStorage.getItem('gold_ai_terms_accepted');
+        if (termsAccepted !== 'true') {
+          setView('TERMS');
+          return;
+        }
+        const savedUser = localStorage.getItem('gold_ai_user_email');
+        if (savedUser) {
+            // Auto-login check status
+            const user = allUsers.find(u => u.email === savedUser);
+            if (user && (user.status === 'ACTIVE' || user.email === ADMIN_EMAIL)) {
+                setCurrentUser(savedUser);
+                updateUserOnlineStatus(savedUser, true);
+                setView('DASHBOARD');
+            } else {
+                localStorage.removeItem('gold_ai_user_email');
+                setView('LOGIN');
+            }
         } else {
-            // If saved user is banned or pending, don't auto login to dashboard
-            localStorage.removeItem('gold_ai_user_email');
             setView('LOGIN');
         }
-    } else {
+    } catch (e) {
+        console.error("Init error", e);
         setView('LOGIN');
     }
   }, []);
@@ -397,24 +408,24 @@ const App: React.FC = () => {
   useEffect(() => {
     if (!isRunning || candles.length < 20 || !techIndicators) return;
     
-    // FIXED: Analyze on every update to capture trades faster (Removed the 10% chance limitation)
-    const shouldAnalyze = true; 
-    
-    if (shouldAnalyze) {
-      analyzeMarket(apiKey, currentAsset.symbol, candles, techIndicators, currentNews, lang).then(result => {
-        setAnalysis(result);
-        
-        // Adjusted confidence thresholds to be more permissive
-        let confidenceThreshold = tradingMode === 'SAFE' ? 80 : tradingMode === 'ULTRA_SAFE' ? 90 : 70;
-        
-        if (avoidNews && currentNews.impact === 'HIGH') confidenceThreshold = 98;
-        
-        if (result.confidence >= confidenceThreshold && result.signal !== SignalType.HOLD) {
-             const hasOpenTrade = trades.some(t => t.symbol === currentAsset.symbol && t.status === 'OPEN');
-             if (!hasOpenTrade) executeTrade(result.signal, candles[candles.length - 1].close);
-        }
-      });
-    }
+    // FIXED: Execute strictly on every update for maximum opportunity
+    analyzeMarket(apiKey, currentAsset.symbol, candles, techIndicators, currentNews, lang).then(result => {
+      setAnalysis(result);
+      
+      // Adjusted confidence thresholds for "Sniper" behavior
+      // Lower threshold in Safe modes to ensure trades actually open when conditions are met
+      let confidenceThreshold = tradingMode === 'SAFE' ? 75 : tradingMode === 'ULTRA_SAFE' ? 85 : 65;
+      
+      if (avoidNews && currentNews.impact === 'HIGH') confidenceThreshold = 98;
+      
+      // FORCE trade if analysis is very strong regardless of mode
+      if (result.confidence >= confidenceThreshold && result.signal !== SignalType.HOLD) {
+            const hasOpenTrade = trades.some(t => t.symbol === currentAsset.symbol && t.status === 'OPEN');
+            if (!hasOpenTrade) {
+                executeTrade(result.signal, candles[candles.length - 1].close);
+            }
+      }
+    });
   }, [candles, isRunning, apiKey, tradingMode, currentAsset]);
 
   useEffect(() => {
@@ -524,10 +535,9 @@ const App: React.FC = () => {
 
           <main className="container mx-auto px-4 py-6 pb-20">
             
-            {/* ADMIN PANEL - Only for valid admin email */}
+            {/* ADMIN PANEL - Clean version without Manipulation tools */}
             {isAdmin && (
                 <AdminPanel 
-                    onForceSignal={(s) => executeTrade(s, candles[candles.length-1]?.close || 0)}
                     onResetBalance={() => setTrades([])}
                     users={allUsers}
                     onUpdateUserStatus={handleAdminStatusChange}

@@ -16,12 +16,12 @@ const CandleStickLayer = (props: any) => {
   // Recharts can sometimes render this component before scales are fully calculated.
   if (!xAxis || !yAxis || !xAxis.scale || !yAxis.scale || !data || data.length === 0) return null;
 
-  const xScale = xAxis.scale;
-  const yScale = yAxis.scale;
-  
-  // Calculate dynamic bandwidth for candles
-  let bandwidth = 10;
   try {
+      const xScale = xAxis.scale;
+      const yScale = yAxis.scale;
+      
+      // Calculate dynamic bandwidth for candles
+      let bandwidth = 10;
       if (xScale.bandwidth) {
           // If using a categorical axis (BandScale)
           bandwidth = xScale.bandwidth();
@@ -29,66 +29,66 @@ const CandleStickLayer = (props: any) => {
           // Estimate bandwidth for time/linear axis
           bandwidth = width / data.length * 0.7;
       }
-  } catch (e) {
+      
+      // Clamp bandwidth for better visuals
+      bandwidth = Math.max(Math.min(bandwidth, 15), 4);
+      const halfBand = bandwidth / 2;
+
+      return (
+        <g>
+          {data.map((entry: Candle, index: number) => {
+             // Safely calculate X position
+             let x = xScale(entry.time);
+             
+             // If using BandScale, center the candle
+             if (xScale.bandwidth) {
+                 x = x + (xScale.bandwidth() - bandwidth) / 2;
+             }
+
+             // Skip if coordinates are invalid
+             if (x === undefined || x === null || isNaN(x)) return null;
+
+             const open = yScale(entry.open);
+             const close = yScale(entry.close);
+             const high = yScale(entry.high);
+             const low = yScale(entry.low);
+
+             if (isNaN(open) || isNaN(close) || isNaN(high) || isNaN(low)) return null;
+             
+             const isUp = entry.close >= entry.open;
+             const color = isUp ? '#22c55e' : '#ef4444';
+             
+             const bodyTop = Math.min(open, close);
+             const bodyHeight = Math.max(Math.abs(open - close), 1); // Ensure at least 1px visibility
+
+             return (
+                <g key={`candle-${index}`}>
+                  {/* Wick (High to Low) */}
+                  <line 
+                    x1={x + halfBand} 
+                    y1={high} 
+                    x2={x + halfBand} 
+                    y2={low} 
+                    stroke={color} 
+                    strokeWidth={1} 
+                  />
+                  {/* Body (Open to Close) */}
+                  <rect 
+                    x={x} 
+                    y={bodyTop} 
+                    width={bandwidth} 
+                    height={bodyHeight} 
+                    fill={color} 
+                    stroke="none"
+                  />
+                </g>
+             );
+          })}
+        </g>
+      );
+  } catch(e) {
       return null;
   }
-  
-  // Clamp bandwidth for better visuals
-  bandwidth = Math.max(Math.min(bandwidth, 15), 4);
-  const halfBand = bandwidth / 2;
-
-  return (
-    <g>
-      {data.map((entry: Candle, index: number) => {
-         // Safely calculate X position
-         let x = xScale(entry.time);
-         
-         // If using BandScale, center the candle
-         if (xScale.bandwidth) {
-             x = x + (xScale.bandwidth() - bandwidth) / 2;
-         }
-
-         // Skip if coordinates are invalid
-         if (x === undefined || x === null || isNaN(x)) return null;
-
-         const open = yScale(entry.open);
-         const close = yScale(entry.close);
-         const high = yScale(entry.high);
-         const low = yScale(entry.low);
-
-         if (isNaN(open) || isNaN(close) || isNaN(high) || isNaN(low)) return null;
-         
-         const isUp = entry.close >= entry.open;
-         const color = isUp ? '#22c55e' : '#ef4444';
-         
-         const bodyTop = Math.min(open, close);
-         const bodyHeight = Math.max(Math.abs(open - close), 1); // Ensure at least 1px visibility
-
-         return (
-            <g key={`candle-${index}`}>
-              {/* Wick (High to Low) */}
-              <line 
-                x1={x + halfBand} 
-                y1={high} 
-                x2={x + halfBand} 
-                y2={low} 
-                stroke={color} 
-                strokeWidth={1} 
-              />
-              {/* Body (Open to Close) */}
-              <rect 
-                x={x} 
-                y={bodyTop} 
-                width={bandwidth} 
-                height={bodyHeight} 
-                fill={color} 
-                stroke="none"
-              />
-            </g>
-         );
-      })}
-    </g>
-  );
 };
 
 const Chart: React.FC<ChartProps> = ({ data, type }) => {
