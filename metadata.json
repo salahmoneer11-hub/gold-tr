@@ -1,0 +1,5 @@
+{
+  "name": "GoldAI Trader Pro",
+  "description": "A high-frequency AI trading bot simulation for Gold (XAU/USD) on MT5, featuring advanced Gemini-powered market analysis and real-time performance metrics.",
+  "requestFramePermissions": []
+}
