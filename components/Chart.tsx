@@ -21,12 +21,16 @@ const CandleStickLayer = (props: any) => {
   
   // Calculate dynamic bandwidth for candles
   let bandwidth = 10;
-  if (xScale.bandwidth) {
-      // If using a categorical axis (BandScale)
-      bandwidth = xScale.bandwidth();
-  } else {
-      // Estimate bandwidth for time/linear axis
-      bandwidth = width / data.length * 0.7;
+  try {
+      if (xScale.bandwidth) {
+          // If using a categorical axis (BandScale)
+          bandwidth = xScale.bandwidth();
+      } else {
+          // Estimate bandwidth for time/linear axis
+          bandwidth = width / data.length * 0.7;
+      }
+  } catch (e) {
+      return null;
   }
   
   // Clamp bandwidth for better visuals
@@ -45,12 +49,14 @@ const CandleStickLayer = (props: any) => {
          }
 
          // Skip if coordinates are invalid
-         if (x === undefined || x === null) return null;
+         if (x === undefined || x === null || isNaN(x)) return null;
 
          const open = yScale(entry.open);
          const close = yScale(entry.close);
          const high = yScale(entry.high);
          const low = yScale(entry.low);
+
+         if (isNaN(open) || isNaN(close) || isNaN(high) || isNaN(low)) return null;
          
          const isUp = entry.close >= entry.open;
          const color = isUp ? '#22c55e' : '#ef4444';

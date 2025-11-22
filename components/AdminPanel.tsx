@@ -41,18 +41,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({
                 <span className="block text-xs text-gray-400 font-bold uppercase">{t.total_visits}</span>
                 <span className="text-xl font-bold text-white">{totalUsers}</span>
              </div>
-        </div>
-      </div>
-
-      {/* Signals Control Section */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-        <div className="space-y-2 md:col-span-2">
-          <p className="text-xs text-gray-500 font-bold uppercase tracking-wider">Signals & System Override</p>
-          <div className="flex gap-2">
-            <button onClick={() => onForceSignal(SignalType.BUY)} className="flex-1 bg-blue-900/20 hover:bg-blue-800/50 text-blue-400 border border-blue-700/50 rounded py-2 font-bold text-sm transition">{t.force_buy}</button>
-            <button onClick={() => onForceSignal(SignalType.SELL)} className="flex-1 bg-orange-900/20 hover:bg-orange-800/50 text-orange-400 border border-orange-700/50 rounded py-2 font-bold text-sm transition">{t.force_sell}</button>
-            <button onClick={onResetBalance} className="w-12 bg-slate-700 hover:bg-red-700 text-white rounded transition" title={t.reset}>♻️</button>
-          </div>
+             <button onClick={onResetBalance} className="bg-slate-700 hover:bg-red-700 text-white px-4 rounded transition font-bold" title={t.reset}>♻️ Reset</button>
         </div>
       </div>
 
