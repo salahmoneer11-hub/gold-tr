@@ -170,6 +170,7 @@ const App: React.FC = () => {
       return () => clearInterval(interval);
   }, []);
 
+  // INITIAL LOAD LOGIC
   useEffect(() => {
     try {
         const savedUser = localStorage.getItem('gold_ai_user_email');
@@ -179,13 +180,22 @@ const App: React.FC = () => {
                 setCurrentUser(savedUser);
                 updateUserOnlineStatus(savedUser, true);
                 
-                // Check if THIS user has accepted terms
+                // 1. Check Terms
                 const hasAcceptedTerms = localStorage.getItem(`gold_ai_terms_${savedUser}`) === 'true';
-                if (hasAcceptedTerms) {
-                    setView('DASHBOARD');
-                } else {
+                if (!hasAcceptedTerms && savedUser !== ADMIN_EMAIL) {
                     setView('TERMS');
+                    return;
                 }
+
+                // 2. Check Subscription
+                const subData = localStorage.getItem(`gold_ai_sub_${savedUser}`);
+                if (!subData && savedUser !== ADMIN_EMAIL) {
+                    setView('PLANS');
+                    return;
+                }
+                if (subData) setUserSubscription(JSON.parse(subData));
+
+                setView('DASHBOARD');
             } else {
                 localStorage.removeItem('gold_ai_user_email');
                 setView('LOGIN');
@@ -221,10 +231,10 @@ const App: React.FC = () => {
       setAllUsers(prev => prev.map(u => u.email === email ? { ...u, isOnline, lastLogin: Date.now() } : u));
   };
 
+  // FLOW: Terms -> Plans
   const handleAcceptTerms = () => {
-    // Save acceptance for CURRENT user only
     localStorage.setItem(`gold_ai_terms_${currentUser}`, 'true');
-    setView('DASHBOARD');
+    setView('PLANS');
   };
 
   const addToast = (title: string, message: string, type: 'success' | 'error' | 'warning' | 'info') => {
@@ -255,9 +265,7 @@ const App: React.FC = () => {
           localStorage.setItem('gold_ai_user_email', email);
           addToast(t.toast_login_success, t.welcome_admin, 'success');
           
-          // Admin bypasses terms or sees them once? Let's show once.
-          const hasAcceptedTerms = localStorage.getItem(`gold_ai_terms_${email}`) === 'true';
-          setView(hasAcceptedTerms ? 'DASHBOARD' : 'TERMS');
+          setView('DASHBOARD');
           return true;
       }
 
@@ -275,15 +283,25 @@ const App: React.FC = () => {
           setCurrentUser(email);
           localStorage.setItem('gold_ai_user_email', email);
           
-          const subData = localStorage.getItem(`gold_ai_sub_${email}`);
-          if (subData) setUserSubscription(JSON.parse(subData));
-          
           addToast(t.toast_login_success, `${email}`, 'success');
           
-          // Check for Terms acceptance
+          // FLOW CHECK:
+          // 1. Terms
           const hasAcceptedTerms = localStorage.getItem(`gold_ai_terms_${email}`) === 'true';
-          setView(hasAcceptedTerms ? 'DASHBOARD' : 'TERMS');
+          if (!hasAcceptedTerms) {
+              setView('TERMS');
+              return true;
+          }
           
+          // 2. Subscription
+          const subData = localStorage.getItem(`gold_ai_sub_${email}`);
+          if (!subData) {
+              setView('PLANS');
+              return true;
+          }
+
+          setUserSubscription(JSON.parse(subData));
+          setView('DASHBOARD');
           return true;
       } else {
           addToast("Error", "User not found. Please register.", "error");
@@ -661,10 +679,6 @@ const App: React.FC = () => {
                                   <button key={tf} onClick={() => setTimeframe(tf)} className={`px-2 py-1 text-[10px] font-bold rounded transition ${timeframe === tf ? 'bg-amber-500 text-black shadow' : 'text-gray-400 hover:text-white hover:bg-slate-700'}`}>{t[`tf_${tf}`] || tf}</button>
                               ))}
                           </div>
-                          <div className="flex items-center bg-slate-800 rounded-lg p-1 border border-slate-700">
-                              <button onClick={() => setChartType('AREA')} className={`px-2 py-1 text-[10px] rounded transition ${chartType === 'AREA' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'}`}>{t.chart_area}</button>
-                              <button onClick={() => setChartType('CANDLE')} className={`px-2 py-1 text-[10px] rounded transition ${chartType === 'CANDLE' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white'}`}>{t.chart_candle}</button>
-                          </div>
                       </div>
                   </div>
                   <div className="flex-1 w-full min-h-0 relative z-0">
@@ -737,34 +751,46 @@ const App: React.FC = () => {
                   <h3 className="font-bold text-lg text-gray-300 mb-4 border-b border-slate-700 pb-2">{t.trade_log}</h3>
                   <div className="flex-1 overflow-y-auto space-y-2 pr-2" ref={scrollRef}>
                     {trades.map((trade) => (
-                      <div key={trade.id} className="bg-slate-800/50 p-3 rounded border border-slate-700 flex justify-between items-start relative overflow-hidden">
+                      <div key={trade.id} className="bg-slate-800/50 p-3 rounded border border-slate-700 flex justify-between items-start relative overflow-hidden group">
                         {trade.isSecured && (
                              <div className="absolute top-0 right-0 w-2 h-2 bg-green-500 rounded-bl-lg animate-pulse" title="Zero Loss Active"></div>
                         )}
-                        <div className="flex flex-col gap-1">
-                          <div className="flex items-center gap-2">
-                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${trade.type === SignalType.BUY ? 'bg-green-900/50 text-green-400' : 'bg-red-900/50 text-red-400'}`}>{trade.type}</span>
-                            <span className="text-[10px] text-gray-500 font-bold">{trade.symbol}</span>
-                            <span className="text-[10px] font-mono bg-slate-700 px-1 rounded text-amber-300 border border-slate-600">Lot: {trade.lotSize}</span>
+                        <div className="flex flex-col gap-1 w-full">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${trade.type === SignalType.BUY ? 'bg-green-900/50 text-green-400' : 'bg-red-900/50 text-red-400'}`}>{trade.type}</span>
+                                <span className="text-[10px] text-gray-400 font-bold">{trade.symbol}</span>
+                            </div>
+                            <span className="text-[10px] font-mono bg-amber-900/30 text-amber-500 px-1.5 py-0.5 rounded border border-amber-900/50">Lot: {trade.lotSize}</span>
                           </div>
-                          <div className="text-[10px] text-gray-400 font-mono flex items-center gap-1 mt-1">
-                             <span className="text-gray-500">In:</span>
-                             <span className="text-white">{trade.entryPrice.toFixed(2)}</span>
-                             {trade.exitPrice && (
-                                 <>
-                                    <span className="text-gray-600 mx-1">➜</span>
-                                    <span className="text-gray-500">Out:</span>
-                                    <span className="text-white">{trade.exitPrice.toFixed(2)}</span>
-                                 </>
-                             )}
+                          
+                          <div className="grid grid-cols-2 gap-2 mt-2 bg-slate-900/50 p-2 rounded text-[10px] font-mono border border-slate-700/50">
+                             <div>
+                                 <span className="text-gray-500 block">Entry Price</span>
+                                 <span className="text-white font-bold">{trade.entryPrice.toFixed(2)}</span>
+                             </div>
+                             <div className="text-right">
+                                 <span className="text-gray-500 block">Current/Exit</span>
+                                 <span className={`${trade.status === 'CLOSED' ? 'text-white' : 'text-amber-400 animate-pulse'}`}>
+                                     {(trade.exitPrice || candles[candles.length - 1]?.close || trade.entryPrice).toFixed(2)}
+                                 </span>
+                             </div>
                           </div>
-                          {trade.status === 'OPEN' && trade.isSecured && <span className="text-[9px] text-green-400 border border-green-900 px-1 rounded bg-green-900/10 w-fit">Risk Free</span>}
-                        </div>
-                        
-                        <div className="flex flex-col items-end">
-                          {trade.status === 'CLOSED' ? (
-                            <span className={`font-mono font-bold text-sm ${trade.profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>{trade.profit >= 0 ? '+' : ''}{trade.profit.toFixed(2)}$</span>
-                          ) : <span className="text-amber-400 text-[10px] animate-pulse">Running</span>}
+                          
+                          <div className="flex items-center justify-between mt-1">
+                              {trade.status === 'OPEN' && trade.isSecured && <span className="text-[9px] text-green-400 border border-green-900 px-1 rounded bg-green-900/10">Risk Free</span>}
+                              <div className="flex-1 text-right">
+                                  {trade.status === 'CLOSED' ? (
+                                    <span className={`font-mono font-bold text-sm ${trade.profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                        {trade.profit >= 0 ? '+' : ''}{trade.profit.toFixed(2)}$
+                                    </span>
+                                  ) : (
+                                    <span className={`font-mono font-bold text-xs ${trade.profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                        {trade.profit >= 0 ? '+' : ''}{trade.profit.toFixed(2)}$ (Run)
+                                    </span>
+                                  )}
+                              </div>
+                          </div>
                         </div>
                       </div>
                     ))}

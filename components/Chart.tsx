@@ -3,10 +3,10 @@ import React, { useEffect, useRef } from 'react';
 import { Candle, ChartType, BrokerName, Timeframe } from '../types';
 
 interface ChartProps {
-  data: Candle[]; // Kept for interface compatibility, but TV fetches its own data
+  data: Candle[]; 
   type: ChartType;
   broker?: BrokerName | string;
-  symbol?: string; // Passed from parent
+  symbol?: string; 
   timeframe?: Timeframe;
 }
 
@@ -66,7 +66,8 @@ const Chart: React.FC<ChartProps> = ({ type, symbol = 'XAUUSD', timeframe = '1m'
           toolbar_bg: "#0f172a",
           studies: [
              "RSI@tv-basicstudies",
-             "MASimple@tv-basicstudies" // Moving Average
+             "MASimple@tv-basicstudies",
+             "MACD@tv-basicstudies"
           ],
           overrides: {
             "mainSeriesProperties.candleStyle.upColor": "#22c55e",
@@ -85,7 +86,7 @@ const Chart: React.FC<ChartProps> = ({ type, symbol = 'XAUUSD', timeframe = '1m'
     document.head.appendChild(script);
 
     return () => {
-        // Cleanup if needed, though TV widget replaces innerHTML usually
+        // Cleanup if needed
     };
   }, [symbol, type, timeframe]);
 
