@@ -1,184 +1,97 @@
 
-import React from 'react';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ComposedChart, Customized } from 'recharts';
-import { Candle, ChartType } from '../types';
+import React, { useEffect, useRef } from 'react';
+import { Candle, ChartType, BrokerName, Timeframe } from '../types';
 
 interface ChartProps {
-  data: Candle[];
+  data: Candle[]; // Kept for interface compatibility, but TV fetches its own data
   type: ChartType;
+  broker?: BrokerName | string;
+  symbol?: string; // Passed from parent
+  timeframe?: Timeframe;
 }
 
-// A robust Custom Component to render Candles that safely accesses axis scales
-const CandleStickLayer = (props: any) => {
-  const { data, xAxis, yAxis, width } = props;
+declare global {
+  interface Window {
+    TradingView: any;
+  }
+}
 
-  // CRITICAL FIX: Explicitly check for scales availability. 
-  // Recharts can sometimes render this component before scales are fully calculated.
-  if (!xAxis || !yAxis || !xAxis.scale || !yAxis.scale || !data || data.length === 0) return null;
+const Chart: React.FC<ChartProps> = ({ type, symbol = 'XAUUSD', timeframe = '1m' }) => {
+  const containerId = useRef(`tv_chart_container_${Math.random().toString(36).substring(7)}`);
 
-  try {
-      const xScale = xAxis.scale;
-      const yScale = yAxis.scale;
-      
-      // Calculate dynamic bandwidth for candles
-      let bandwidth = 10;
-      if (xScale.bandwidth) {
-          // If using a categorical axis (BandScale)
-          bandwidth = xScale.bandwidth();
-      } else {
-          // Estimate bandwidth for time/linear axis
-          bandwidth = width / data.length * 0.7;
+  // Map App Timeframe to TradingView Interval
+  const mapTimeframe = (tf: string): string => {
+    switch(tf) {
+        case '1m': return '1';
+        case '5m': return '5';
+        case '15m': return '15';
+        case '30m': return '30';
+        case '1h': return '60';
+        case '4h': return '240';
+        case '1d': return 'D';
+        case '1w': return 'W';
+        case '1M': return 'M';
+        default: return '1';
+    }
+  };
+
+  // Map App Symbol to TradingView Symbol
+  const mapSymbol = (sym: string): string => {
+      // Crypto usually on BINANCE, Forex/Gold on OANDA or FXCM for general view
+      if (sym.includes('USDT') || sym.includes('BTC') || sym.includes('ETH')) {
+          return `BINANCE:${sym}`;
       }
-      
-      // Clamp bandwidth for better visuals
-      bandwidth = Math.max(Math.min(bandwidth, 15), 4);
-      const halfBand = bandwidth / 2;
+      if (sym === 'XAUUSD') return 'OANDA:XAUUSD';
+      return `FX:${sym}`; // Default fallback
+  };
 
-      return (
-        <g>
-          {data.map((entry: Candle, index: number) => {
-             // Safely calculate X position
-             let x = xScale(entry.time);
-             
-             // If using BandScale, center the candle
-             if (xScale.bandwidth) {
-                 x = x + (xScale.bandwidth() - bandwidth) / 2;
-             }
+  useEffect(() => {
+    const script = document.createElement('script');
+    script.src = 'https://s3.tradingview.com/tv.js';
+    script.async = true;
+    script.onload = () => {
+      if (window.TradingView) {
+        new window.TradingView.widget({
+          autosize: true,
+          symbol: mapSymbol(symbol),
+          interval: mapTimeframe(timeframe),
+          timezone: "Etc/UTC",
+          theme: "dark",
+          style: type === 'AREA' ? "3" : "1", // 1 = Candles, 3 = Area
+          locale: "en",
+          enable_publishing: false,
+          hide_side_toolbar: false,
+          allow_symbol_change: false, // Controlled by App
+          container_id: containerId.current,
+          toolbar_bg: "#0f172a",
+          studies: [
+             "RSI@tv-basicstudies",
+             "MASimple@tv-basicstudies" // Moving Average
+          ],
+          overrides: {
+            "mainSeriesProperties.candleStyle.upColor": "#22c55e",
+            "mainSeriesProperties.candleStyle.downColor": "#ef4444",
+            "mainSeriesProperties.candleStyle.borderUpColor": "#22c55e",
+            "mainSeriesProperties.candleStyle.borderDownColor": "#ef4444",
+            "mainSeriesProperties.candleStyle.wickUpColor": "#22c55e",
+            "mainSeriesProperties.candleStyle.wickDownColor": "#ef4444",
+            "paneProperties.background": "#0f172a",
+            "paneProperties.vertGridProperties.color": "#1e293b",
+            "paneProperties.horzGridProperties.color": "#1e293b",
+          }
+        });
+      }
+    };
+    document.head.appendChild(script);
 
-             // Skip if coordinates are invalid
-             if (x === undefined || x === null || isNaN(x)) return null;
-
-             const open = yScale(entry.open);
-             const close = yScale(entry.close);
-             const high = yScale(entry.high);
-             const low = yScale(entry.low);
-
-             if (isNaN(open) || isNaN(close) || isNaN(high) || isNaN(low)) return null;
-             
-             const isUp = entry.close >= entry.open;
-             const color = isUp ? '#22c55e' : '#ef4444';
-             
-             const bodyTop = Math.min(open, close);
-             const bodyHeight = Math.max(Math.abs(open - close), 1); // Ensure at least 1px visibility
-
-             return (
-                <g key={`candle-${index}`}>
-                  {/* Wick (High to Low) */}
-                  <line 
-                    x1={x + halfBand} 
-                    y1={high} 
-                    x2={x + halfBand} 
-                    y2={low} 
-                    stroke={color} 
-                    strokeWidth={1} 
-                  />
-                  {/* Body (Open to Close) */}
-                  <rect 
-                    x={x} 
-                    y={bodyTop} 
-                    width={bandwidth} 
-                    height={bodyHeight} 
-                    fill={color} 
-                    stroke="none"
-                  />
-                </g>
-             );
-          })}
-        </g>
-      );
-  } catch(e) {
-      return null;
-  }
-};
-
-const Chart: React.FC<ChartProps> = ({ data, type }) => {
-  if (type === 'CANDLE') {
-    return (
-      <div className="w-full h-full min-h-[300px]">
-        <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-             <defs>
-                <linearGradient id="colorCandle" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#fbbf24" stopOpacity={0.1}/>
-                  <stop offset="95%" stopColor="#fbbf24" stopOpacity={0}/>
-                </linearGradient>
-            </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} opacity={0.5} />
-            <XAxis 
-              dataKey="time" 
-              stroke="#94a3b8" 
-              tick={{fontSize: 10}}
-              interval="preserveStartEnd"
-              minTickGap={20}
-            />
-            <YAxis 
-              domain={['auto', 'auto']} 
-              orientation="right" 
-              stroke="#94a3b8"
-              tick={{fontSize: 11}}
-              tickFormatter={(value) => value.toFixed(2)}
-              scale="linear" 
-              width={60}
-            />
-            <Tooltip 
-              contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #475569', color: '#f8fafc' }}
-              cursor={{stroke: 'rgba(255,255,255,0.1)'}}
-              labelStyle={{ color: '#94a3b8', marginBottom: '0.5rem' }}
-              formatter={(value: any, name: string, props: any) => {
-                  if (name === 'close') return [value, 'Price'];
-                  return [value, name];
-              }}
-            />
-            {/* We pass the data explicitly to the Customized component */}
-            <Customized component={CandleStickLayer} data={data} />
-          </ComposedChart>
-        </ResponsiveContainer>
-      </div>
-    );
-  }
+    return () => {
+        // Cleanup if needed, though TV widget replaces innerHTML usually
+    };
+  }, [symbol, type, timeframe]);
 
   return (
-    <div className="w-full h-full min-h-[300px]">
-      <ResponsiveContainer width="100%" height="100%">
-        <AreaChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-          <defs>
-            <linearGradient id="colorGold" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="5%" stopColor="#fbbf24" stopOpacity={0.3}/>
-              <stop offset="95%" stopColor="#fbbf24" stopOpacity={0}/>
-            </linearGradient>
-          </defs>
-          <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} opacity={0.5} />
-          <XAxis 
-            dataKey="time" 
-            stroke="#94a3b8" 
-            tick={{fontSize: 10}}
-            interval="preserveStartEnd"
-            minTickGap={20}
-          />
-          <YAxis 
-            domain={['auto', 'auto']} 
-            orientation="right" 
-            stroke="#94a3b8"
-            tick={{fontSize: 11}}
-            tickFormatter={(value) => value.toFixed(2)}
-            width={60}
-          />
-          <Tooltip 
-            contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #475569', color: '#fbbf24' }}
-            itemStyle={{ color: '#fbbf24' }}
-            labelStyle={{ color: '#94a3b8' }}
-          />
-          <Area 
-            type="monotone" 
-            dataKey="close" 
-            stroke="#fbbf24" 
-            strokeWidth={2}
-            fillOpacity={1} 
-            fill="url(#colorGold)" 
-            isAnimationActive={false}
-          />
-        </AreaChart>
-      </ResponsiveContainer>
+    <div className="w-full h-full min-h-[500px] relative bg-slate-900 rounded-lg overflow-hidden">
+      <div id={containerId.current} className="w-full h-full absolute inset-0" />
     </div>
   );
 };

@@ -173,6 +173,14 @@ export const translations: Record<LanguageCode, any> = {
     account_pending_msg: "حسابك قيد المراجعة. يرجى انتظار موافقة الأدمن.",
     account_banned_msg: "تم حظر حسابك من قبل الإدارة.",
     wait_approval: "تم إنشاء الحساب. بانتظار تفعيل الأدمن.",
+    economic_calendar: "الأجندة الاقتصادية",
+    impact_high: "قوي",
+    impact_medium: "متوسط",
+    impact_low: "ضعيف",
+    forecast: "المتوقع",
+    previous: "السابق",
+    currency: "العملة",
+    event_time: "الوقت"
   },
   en: {
     app_title: "GOLD AI PRO",
@@ -335,6 +343,14 @@ We are not liable for connection issues.`,
     account_pending_msg: "Your account is pending approval. Please wait for admin.",
     account_banned_msg: "Your account has been banned by the administrator.",
     wait_approval: "Account created. Waiting for admin approval.",
+    economic_calendar: "Economic Calendar",
+    impact_high: "High",
+    impact_medium: "Medium",
+    impact_low: "Low",
+    forecast: "Forecast",
+    previous: "Previous",
+    currency: "Currency",
+    event_time: "Time"
   },
   fr: {
       app_title: "GOLD AI PRO",
@@ -345,7 +361,11 @@ We are not liable for connection issues.`,
       user_management: "Gestion des utilisateurs",
       user_status: "Statut",
       action_ban: "Bannir",
-      action_approve: "Approuver"
+      action_approve: "Approuver",
+      economic_calendar: "Calendrier Économique",
+      impact_high: "Élevé",
+      impact_medium: "Moyen",
+      impact_low: "Faible"
   },
   es: {
       app_title: "GOLD AI PRO",
@@ -356,7 +376,11 @@ We are not liable for connection issues.`,
       user_management: "Gestión de usuarios",
       user_status: "Estado",
       action_ban: "Prohibir",
-      action_approve: "Aprobar"
+      action_approve: "Aprobar",
+      economic_calendar: "Calendario Económico",
+      impact_high: "Alto",
+      impact_medium: "Medio",
+      impact_low: "Bajo"
   },
   de: {
       app_title: "GOLD AI PRO",
@@ -367,7 +391,11 @@ We are not liable for connection issues.`,
       user_management: "Benutzerverwaltung",
       user_status: "Status",
       action_ban: "Verbieten",
-      action_approve: "Genehmigen"
+      action_approve: "Genehmigen",
+      economic_calendar: "Wirtschaftskalender",
+      impact_high: "Hoch",
+      impact_medium: "Mittel",
+      impact_low: "Niedrig"
   },
   ru: {
       app_title: "GOLD AI PRO",
@@ -378,7 +406,11 @@ We are not liable for connection issues.`,
       user_management: "Управление пользователями",
       user_status: "Статус",
       action_ban: "Забанить",
-      action_approve: "Одобрить"
+      action_approve: "Одобрить",
+      economic_calendar: "Экономический календарь",
+      impact_high: "Высокий",
+      impact_medium: "Средний",
+      impact_low: "Низкий"
   },
   zh: {
       app_title: "GOLD AI PRO",
@@ -389,7 +421,11 @@ We are not liable for connection issues.`,
       user_management: "用户管理",
       user_status: "状态",
       action_ban: "封禁",
-      action_approve: "批准"
+      action_approve: "批准",
+      economic_calendar: "财经日历",
+      impact_high: "高",
+      impact_medium: "中",
+      impact_low: "低"
   },
   tr: {
       app_title: "GOLD AI PRO",
@@ -400,7 +436,11 @@ We are not liable for connection issues.`,
       user_management: "Kullanıcı Yönetimi",
       user_status: "Durum",
       action_ban: "Yasakla",
-      action_approve: "Onayla"
+      action_approve: "Onayla",
+      economic_calendar: "Ekonomik Takvim",
+      impact_high: "Yüksek",
+      impact_medium: "Orta",
+      impact_low: "Düşük"
   },
   hi: {
       app_title: "GOLD AI PRO",
@@ -411,6 +451,10 @@ We are not liable for connection issues.`,
       user_management: "उपयोगकर्ता प्रबंधन",
       user_status: "स्थिति",
       action_ban: "प्रतिबंध",
-      action_approve: "अनुमोदन"
+      action_approve: "अनुमोदन",
+      economic_calendar: "आर्थिक कैलेंडर",
+      impact_high: "उच्च",
+      impact_medium: "मध्यम",
+      impact_low: "कम"
   }
 };

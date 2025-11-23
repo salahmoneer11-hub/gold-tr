@@ -34,7 +34,7 @@ const BotControl: React.FC<BotControlProps> = ({
   const t = translations[lang];
 
   return (
-    <div className="glass-panel p-4 rounded-xl mb-6 flex flex-col md:flex-row items-center justify-between gap-4">
+    <div className="glass-panel p-4 rounded-xl mb-6 flex flex-col md:flex-row items-center justify-between gap-4 relative z-50">
       <div className="flex items-center gap-4">
         <div className={`w-4 h-4 rounded-full animate-pulse ${isRunning ? 'bg-green-500 shadow-[0_0_10px_#22c55e]' : 'bg-red-500'}`}></div>
         <div>
@@ -63,7 +63,7 @@ const BotControl: React.FC<BotControlProps> = ({
       </div>
 
       {showSettings && (
-        <div className="fixed inset-0 bg-black/80 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
+        <div className="fixed inset-0 bg-black/80 z-[9999] flex items-center justify-center p-4 backdrop-blur-sm">
           <div className="bg-slate-800 p-6 rounded-2xl max-w-md w-full border border-slate-700 shadow-2xl animate-fadeIn relative">
             {/* Close Button */}
             <button 
@@ -97,11 +97,12 @@ const BotControl: React.FC<BotControlProps> = ({
             </div>
 
             <div className="mb-4">
-              <label className="block text-sm text-gray-300 mb-2">{t.lot_size}</label>
+              <label className="block text-sm text-gray-300 mb-2">{t.lot_size} (Max: 50)</label>
               <input 
                 type="number" 
                 step="0.01"
                 min="0.01"
+                max="50.00"
                 value={lotSize}
                 onChange={(e) => setLotSize(Number(e.target.value))}
                 className="w-full bg-slate-900 border border-slate-600 rounded-lg p-3 text-white focus:ring-2 focus:ring-amber-500 outline-none font-mono"

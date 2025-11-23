@@ -19,11 +19,14 @@ export interface Trade {
   type: SignalType;
   entryPrice: number;
   exitPrice?: number;
+  slPrice: number;       // Dynamic Stop Loss Price
+  highestReached: number; // Highest price reached since entry (for trailing)
   lotSize: number;
   profit: number;
   timestamp: number;
   status: 'OPEN' | 'CLOSED';
   symbol: string;
+  isSecured?: boolean;   // Visual flag for "Risk Free" status
 }
 
 export interface Indicators {
@@ -65,6 +68,17 @@ export interface BotConfig {
 export interface NewsStatus {
   impact: 'NONE' | 'MEDIUM' | 'HIGH';
   event: string;
+}
+
+export interface EconomicEvent {
+  id: string;
+  time: string;
+  currency: string;
+  event: string;
+  impact: 'HIGH' | 'MEDIUM' | 'LOW';
+  actual?: string;
+  forecast: string;
+  previous: string;
 }
 
 export interface ToastMessage {

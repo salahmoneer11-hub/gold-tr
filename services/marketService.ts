@@ -1,5 +1,5 @@
 
-import { Candle, Indicators, NewsStatus, Timeframe } from '../types';
+import { Candle, Indicators, NewsStatus, Timeframe, EconomicEvent } from '../types';
 
 // Binance API Endpoints
 const BASE_URL = 'https://api.binance.com/api/v3';
@@ -252,4 +252,17 @@ export const getSimulatedNews = (): NewsStatus => {
     impact: 'NONE',
     event: events[Math.floor(Math.random() * events.length)]
   };
+};
+
+export const getEconomicCalendar = (): EconomicEvent[] => {
+    // Simulate today's realistic high-impact schedule
+    const events: EconomicEvent[] = [
+        { id: '1', time: '08:00', currency: 'EUR', event: 'German GDP (QoQ)', impact: 'MEDIUM', forecast: '0.1%', previous: '-0.3%' },
+        { id: '2', time: '13:30', currency: 'USD', event: 'Core PPI (MoM)', impact: 'HIGH', forecast: '0.2%', previous: '0.3%' },
+        { id: '3', time: '13:30', currency: 'USD', event: 'Unemployment Claims', impact: 'HIGH', forecast: '212K', previous: '210K' },
+        { id: '4', time: '15:00', currency: 'USD', event: 'ISM Services PMI', impact: 'MEDIUM', forecast: '52.0', previous: '51.4' },
+        { id: '5', time: '18:00', currency: 'USD', event: 'FOMC Member Speaks', impact: 'HIGH', forecast: '-', previous: '-' },
+        { id: '6', time: '21:30', currency: 'USD', event: 'Fed Balance Sheet', impact: 'LOW', forecast: '-', previous: '7.4T' },
+    ];
+    return events;
 };

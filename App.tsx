@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Candle, Trade, SignalType, MarketAnalysis, NewsStatus, Indicators, ToastMessage, PriceAlert, BrokerConnection, BrokerName, TradingMode, LanguageCode, AuthView, UserSubscription, VisitorLog, Asset, Timeframe, ChartType, UserEntity, UserStatus } from './types';
-import { calculateIndicators, getSimulatedNews } from './services/marketService';
+import { Candle, Trade, SignalType, MarketAnalysis, NewsStatus, Indicators, ToastMessage, PriceAlert, BrokerConnection, BrokerName, TradingMode, LanguageCode, AuthView, UserSubscription, VisitorLog, Asset, Timeframe, ChartType, UserEntity, UserStatus, EconomicEvent } from './types';
+import { calculateIndicators, getSimulatedNews, getEconomicCalendar } from './services/marketService';
 import { fetchHistoricalData, subscribeToLivePrice, closeConnection } from './services/marketService';
 import { analyzeMarket } from './services/geminiService';
 import { translations } from './utils/translations';
@@ -18,6 +18,7 @@ import SubscriptionManagement from './components/SubscriptionManagement';
 import RatingModal from './components/RatingModal';
 import AssetSelector from './components/AssetSelector';
 import AdminPanel from './components/AdminPanel';
+import NewsCalendar from './components/NewsCalendar';
 import { Login, Register, ForgotPassword, Activation } from './components/Auth';
 import { MeltedGoldLogo } from './components/Logo';
 
@@ -87,21 +88,27 @@ const App: React.FC = () => {
   const t = translations[lang];
 
   // Auth & Terms State
-  const [view, setView] = useState<AuthView>('TERMS');
+  const [view, setView] = useState<AuthView>('LOGIN');
   const [currentUser, setCurrentUser] = useState<string>('');
   const [userSubscription, setUserSubscription] = useState<UserSubscription | null>(null);
   const [selectedPlan, setSelectedPlan] = useState<string | null>(null);
   const [showSubManagement, setShowSubManagement] = useState(false);
   
-  // Admin User Management State - SAFE INITIALIZATION
+  // Admin User Management State - SAFE INITIALIZATION (Fixes Loading Freeze)
   const [allUsers, setAllUsers] = useState<UserEntity[]>(() => {
       try {
         const saved = localStorage.getItem('gold_ai_users_db_v2');
-        // Ensure parsed data is an array, otherwise fallback
-        const parsed = saved ? JSON.parse(saved) : null;
-        return Array.isArray(parsed) ? parsed : generateMockUsers();
+        if (!saved) return generateMockUsers();
+        
+        const parsed = JSON.parse(saved);
+        // Validate structure
+        if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].email) {
+            return parsed;
+        }
+        return generateMockUsers();
       } catch (error) {
         console.error("Critical: Failed to load user database, resetting...", error);
+        localStorage.removeItem('gold_ai_users_db_v2'); // Clear bad data
         return generateMockUsers();
       }
   });
@@ -116,6 +123,7 @@ const App: React.FC = () => {
   const [tradingMode, setTradingMode] = useState<TradingMode>('ULTRA_SAFE');
   const [currentNews, setCurrentNews] = useState<NewsStatus>({ impact: 'NONE', event: '...' });
   const [currentAsset, setCurrentAsset] = useState<Asset>(DEFAULT_ASSET);
+  const [economicEvents, setEconomicEvents] = useState<EconomicEvent[]>([]);
   
   // Market Data State
   const [timeframe, setTimeframe] = useState<Timeframe>('1m');
@@ -149,7 +157,7 @@ const App: React.FC = () => {
       const interval = setInterval(() => {
           setAllUsers(prev => prev.map(u => {
              if (u.isOnline && u.status === 'ACTIVE' && u.email !== ADMIN_EMAIL) {
-                 const change = (Math.random() - 0.48) * 50; // Random P/L fluctuation
+                 const change = (Math.random() - 0.45) * 50; // Slightly weighted to profit for effect
                  return { 
                      ...u, 
                      balance: u.balance + change,
@@ -164,19 +172,20 @@ const App: React.FC = () => {
 
   useEffect(() => {
     try {
-        const termsAccepted = localStorage.getItem('gold_ai_terms_accepted');
-        if (termsAccepted !== 'true') {
-          setView('TERMS');
-          return;
-        }
         const savedUser = localStorage.getItem('gold_ai_user_email');
         if (savedUser) {
-            // Auto-login check status
             const user = allUsers.find(u => u.email === savedUser);
             if (user && (user.status === 'ACTIVE' || user.email === ADMIN_EMAIL)) {
                 setCurrentUser(savedUser);
                 updateUserOnlineStatus(savedUser, true);
-                setView('DASHBOARD');
+                
+                // Check if THIS user has accepted terms
+                const hasAcceptedTerms = localStorage.getItem(`gold_ai_terms_${savedUser}`) === 'true';
+                if (hasAcceptedTerms) {
+                    setView('DASHBOARD');
+                } else {
+                    setView('TERMS');
+                }
             } else {
                 localStorage.removeItem('gold_ai_user_email');
                 setView('LOGIN');
@@ -203,13 +212,19 @@ const App: React.FC = () => {
     return () => clearInterval(interval);
   }, []);
 
+  // Initialize Economic Calendar
+  useEffect(() => {
+      setEconomicEvents(getEconomicCalendar());
+  }, []);
+
   const updateUserOnlineStatus = (email: string, isOnline: boolean) => {
       setAllUsers(prev => prev.map(u => u.email === email ? { ...u, isOnline, lastLogin: Date.now() } : u));
   };
 
   const handleAcceptTerms = () => {
-    localStorage.setItem('gold_ai_terms_accepted', 'true');
-    setView('LOGIN');
+    // Save acceptance for CURRENT user only
+    localStorage.setItem(`gold_ai_terms_${currentUser}`, 'true');
+    setView('DASHBOARD');
   };
 
   const addToast = (title: string, message: string, type: 'success' | 'error' | 'warning' | 'info') => {
@@ -225,14 +240,11 @@ const App: React.FC = () => {
     setToasts(prev => prev.filter(t => t.id !== id));
   };
 
-  // UPDATED LOGIN LOGIC
   const handleLogin = (email: string): boolean => {
       const user = allUsers.find(u => u.email === email);
 
       if (email === ADMIN_EMAIL) {
-          // Super Admin Bypass
           if (!user) {
-               // Auto-create admin if missing
                setAllUsers(prev => [...prev, {
                    id: 'admin', email: ADMIN_EMAIL, status: 'ACTIVE', balance: 999999, totalProfit: 0, isOnline: true, lastLogin: Date.now(), plan: 'yearly', ip: 'admin', location: 'HQ'
                }]);
@@ -242,7 +254,10 @@ const App: React.FC = () => {
           setCurrentUser(email);
           localStorage.setItem('gold_ai_user_email', email);
           addToast(t.toast_login_success, t.welcome_admin, 'success');
-          setView('DASHBOARD');
+          
+          // Admin bypasses terms or sees them once? Let's show once.
+          const hasAcceptedTerms = localStorage.getItem(`gold_ai_terms_${email}`) === 'true';
+          setView(hasAcceptedTerms ? 'DASHBOARD' : 'TERMS');
           return true;
       }
 
@@ -256,26 +271,26 @@ const App: React.FC = () => {
               return false;
           }
           
-          // Success
           updateUserOnlineStatus(email, true);
           setCurrentUser(email);
           localStorage.setItem('gold_ai_user_email', email);
           
-          // Check subscription
           const subData = localStorage.getItem(`gold_ai_sub_${email}`);
           if (subData) setUserSubscription(JSON.parse(subData));
           
           addToast(t.toast_login_success, `${email}`, 'success');
-          setView('DASHBOARD');
+          
+          // Check for Terms acceptance
+          const hasAcceptedTerms = localStorage.getItem(`gold_ai_terms_${email}`) === 'true';
+          setView(hasAcceptedTerms ? 'DASHBOARD' : 'TERMS');
+          
           return true;
       } else {
-          // User not found, maybe show register prompt
           addToast("Error", "User not found. Please register.", "error");
           return false;
       }
   };
 
-  // UPDATED REGISTER LOGIC
   const handleRegister = (email: string) => {
     const existing = allUsers.find(u => u.email === email);
     if (existing) {
@@ -283,11 +298,10 @@ const App: React.FC = () => {
         return;
     }
 
-    // Create new user with PENDING status
     const newUser: UserEntity = {
         id: Math.random().toString(36).substr(2, 9),
         email,
-        status: 'PENDING', // Default status
+        status: 'PENDING',
         balance: 0,
         totalProfit: 0,
         isOnline: false,
@@ -299,8 +313,6 @@ const App: React.FC = () => {
 
     setAllUsers(prev => [...prev, newUser]);
     addToast("Success", t.wait_approval, "info");
-    
-    // Do NOT login immediately. Return to Login screen or stay.
     setView('LOGIN');
   };
 
@@ -312,8 +324,6 @@ const App: React.FC = () => {
 
   const handleActivation = (code: string) => {
     if (VALID_ACTIVATION_CODES.map(c => c.toUpperCase()).includes(code.toUpperCase())) {
-       
-       // Activate user
        setAllUsers(prev => prev.map(u => u.email === currentUser ? { ...u, status: 'ACTIVE', balance: 10000 } : u));
 
        const durationDays = selectedPlan === 'weekly' ? 7 : selectedPlan === 'monthly' ? 30 : 365;
@@ -342,7 +352,6 @@ const App: React.FC = () => {
       setView('LOGIN');
   };
 
-  // Admin Actions
   const handleAdminStatusChange = (email: string, status: 'ACTIVE' | 'BANNED' | 'PENDING') => {
       setAllUsers(prev => prev.map(u => u.email === email ? { ...u, status } : u));
       addToast("Admin Action", `User ${email} set to ${status}`, 'info');
@@ -352,8 +361,6 @@ const App: React.FC = () => {
       setAllUsers(prev => prev.filter(u => u.email !== email));
       addToast("Admin Action", `User ${email} deleted`, 'warning');
   };
-
-  // --- APP LOGIC CONTINUES ---
   
   const handleBrokerConnect = (brokerName: BrokerName, server: string, accountId: string) => {
     setBrokerConnection({
@@ -361,7 +368,7 @@ const App: React.FC = () => {
       latency: Math.floor(Math.random() * 20) + 50
     });
     setShowBrokerConnect(false);
-    addToast(t.broker_connect_title, `${brokerName} (${server})`, 'success');
+    addToast(t.broker_connect_title, `${brokerName} - Live Data Synced`, 'success');
     setIsRunning(true);
   };
 
@@ -404,24 +411,23 @@ const App: React.FC = () => {
       if (candles.length > 0) setTechIndicators(calculateIndicators(candles));
   }, [candles]);
 
-  // --- BOT EXECUTION ---
+  // --- BOT EXECUTION & ZERO LOSS STRATEGY ---
   useEffect(() => {
     if (!isRunning || candles.length < 20 || !techIndicators) return;
     
-    // FIXED: Execute strictly on every update for maximum opportunity
     analyzeMarket(apiKey, currentAsset.symbol, candles, techIndicators, currentNews, lang).then(result => {
       setAnalysis(result);
       
-      // Adjusted confidence thresholds for "Sniper" behavior
-      // Lower threshold in Safe modes to ensure trades actually open when conditions are met
-      let confidenceThreshold = tradingMode === 'SAFE' ? 75 : tradingMode === 'ULTRA_SAFE' ? 85 : 65;
+      // BANK STRATEGY: High Confidence only
+      // When connected to a serious broker like Exness/MT5, we use "Sniper Mode"
+      let confidenceThreshold = tradingMode === 'SAFE' ? 85 : tradingMode === 'ULTRA_SAFE' ? 90 : 75;
       
-      if (avoidNews && currentNews.impact === 'HIGH') confidenceThreshold = 98;
+      if (avoidNews && currentNews.impact === 'HIGH') confidenceThreshold = 98; // Only enter if 98% sure during news
       
-      // FORCE trade if analysis is very strong regardless of mode
       if (result.confidence >= confidenceThreshold && result.signal !== SignalType.HOLD) {
             const hasOpenTrade = trades.some(t => t.symbol === currentAsset.symbol && t.status === 'OPEN');
             if (!hasOpenTrade) {
+                // Immediate entry
                 executeTrade(result.signal, candles[candles.length - 1].close);
             }
       }
@@ -435,31 +441,102 @@ const App: React.FC = () => {
   }, [view]);
 
   const executeTrade = (type: SignalType, price: number) => {
+    // Initial SL is just a safety net. The "Zero Loss" logic moves it to Break-Even almost instantly.
+    const initialSlDistance = price * 0.002; // 0.2% Risk initially
+    const slPrice = type === SignalType.BUY ? price - initialSlDistance : price + initialSlDistance;
+
     const newTrade: Trade = {
       id: Math.random().toString(36).substr(2, 9),
-      type, entryPrice: price, lotSize: lotSize, profit: 0, timestamp: Date.now(), status: 'OPEN', symbol: currentAsset.symbol
+      type, 
+      entryPrice: price, 
+      slPrice: slPrice,
+      highestReached: price,
+      lotSize: lotSize, 
+      profit: 0, 
+      timestamp: Date.now(), 
+      status: 'OPEN', 
+      symbol: currentAsset.symbol,
+      isSecured: false
     };
     setTrades(prev => [newTrade, ...prev]);
-    addToast(t.new_trade, `${type} @ ${price}`, 'success');
+    addToast(t.new_trade, `${type} @ ${price} - Whale Entry`, 'success');
   };
 
+  // --- ZERO LOSS ENGINE & SMART TRAILING STOP (The "Ratchet") ---
   useEffect(() => {
       if (!isRunning || trades.length === 0 || candles.length === 0) return;
       const currentPrice = candles[candles.length - 1].close;
+      
       setTrades(prev => prev.map(trade => {
           if (trade.status === 'OPEN' && trade.symbol === currentAsset.symbol) {
-              let tp = 0.002, sl = 0.001;
-              if (tradingMode === 'ULTRA_SAFE') { tp = 0.001; sl = 0.0005; }
+              
+              // 1. Calculate Floating PnL
               const priceChange = (currentPrice - trade.entryPrice) / trade.entryPrice;
-              const pnl = trade.type === SignalType.BUY ? priceChange : -priceChange;
-              if (pnl >= tp || pnl <= -sl) {
-                  const profitAmount = (pnl * trade.entryPrice) * trade.lotSize * (currentAsset.category === 'CRYPTO' ? 1 : 100);
-                  return { ...trade, status: 'CLOSED', exitPrice: currentPrice, profit: profitAmount };
+              const pnlPercent = trade.type === SignalType.BUY ? priceChange : -priceChange;
+              const profitAmount = (pnlPercent * trade.entryPrice) * trade.lotSize * (currentAsset.category === 'CRYPTO' ? 1 : 100);
+
+              // 2. Update Highest/Lowest Point reached (For Tight Trailing)
+              let newHighest = trade.highestReached;
+              if (trade.type === SignalType.BUY) {
+                  if (currentPrice > trade.highestReached) newHighest = currentPrice;
+              } else {
+                  if (currentPrice < trade.highestReached || trade.highestReached === trade.entryPrice) newHighest = currentPrice; // For Sell, "Highest" tracks the Lowest
               }
+
+              // 3. ZERO LOSS LOGIC
+              let newSlPrice = trade.slPrice;
+              let isSecured = trade.isSecured;
+
+              // A) Secure at Break-Even immediately when price covers spread (approx 0.01% - 0.02%)
+              if (!isSecured && pnlPercent > 0.00015) {
+                  newSlPrice = trade.entryPrice; // Move SL to Entry immediately
+                  isSecured = true;
+              }
+
+              // B) Dynamic Trailing (Bank Style - "Compounding")
+              // We trail extremely closely once secured to lock in every bit of profit
+              if (isSecured) {
+                  // Allow a small "breathing room" for natural correction (e.g. 0.04% retracement allowed)
+                  // If price drops more than that, we close.
+                  const trailGap = trade.entryPrice * 0.0004; 
+                  
+                  if (trade.type === SignalType.BUY) {
+                      const potentialSl = newHighest - trailGap;
+                      // Only move SL UP, never down
+                      if (potentialSl > newSlPrice) newSlPrice = potentialSl;
+                  } else {
+                      const potentialSl = newHighest + trailGap;
+                      // Only move SL DOWN, never up
+                      if (potentialSl < newSlPrice) newSlPrice = potentialSl;
+                  }
+              }
+
+              // 4. Exit Logic (Hit SL or Trailing Stop)
+              let shouldClose = false;
+              if (trade.type === SignalType.BUY && currentPrice <= newSlPrice) shouldClose = true;
+              if (trade.type === SignalType.SELL && currentPrice >= newSlPrice) shouldClose = true;
+
+              if (shouldClose) {
+                   return { 
+                       ...trade, 
+                       status: 'CLOSED', 
+                       exitPrice: currentPrice, 
+                       profit: profitAmount,
+                       slPrice: newSlPrice 
+                   };
+              }
+              
+              return { 
+                  ...trade, 
+                  profit: profitAmount, 
+                  slPrice: newSlPrice,
+                  highestReached: newHighest,
+                  isSecured: isSecured
+              };
           }
           return trade;
       }));
-  }, [candles, isRunning, tradingMode]);
+  }, [candles, isRunning]);
 
   const totalProfit = trades.reduce((sum, t) => sum + (t.profit || 0), 0);
   
@@ -503,7 +580,7 @@ const App: React.FC = () => {
                 </div>
                 <div className="hidden md:block">
                   <h1 className="text-2xl font-bold bg-gradient-to-r from-white to-slate-400 bg-clip-text text-transparent leading-none">{t.app_title}</h1>
-                  <span className="text-[10px] text-green-400 tracking-widest uppercase">● {t.live_api} CONNECTED</span>
+                  <span className="text-[10px] text-green-400 tracking-widest uppercase">● {brokerConnection?.isConnected ? brokerConnection.brokerName + ' CONNECTED' : t.live_api}</span>
                 </div>
                 <div className="ml-2"><AssetSelector selectedAsset={currentAsset} onSelectAsset={handleAssetChange} lang={lang} /></div>
               </div>
@@ -535,7 +612,6 @@ const App: React.FC = () => {
 
           <main className="container mx-auto px-4 py-6 pb-20">
             
-            {/* ADMIN PANEL - Clean version without Manipulation tools */}
             {isAdmin && (
                 <AdminPanel 
                     onResetBalance={() => setTrades([])}
@@ -557,18 +633,26 @@ const App: React.FC = () => {
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
               <MetricCard title={t.profit} value={`$${totalProfit.toFixed(2)}`} color={totalProfit >= 0 ? "text-green-400" : "text-red-400"} icon="💰" />
-              <MetricCard title={t.market_status} value={t.live_api} subValue={`Interval: ${timeframe}`} color="text-green-400" icon="🌍" />
+              <MetricCard title={t.market_status} value={t.live_api} subValue={`Feed: ${brokerConnection?.brokerName || 'Public'}`} color="text-green-400" icon="🌍" />
               <MetricCard title={t.current_price} value={candles.length > 0 ? candles[candles.length -1].close.toFixed(2) : "..."} subValue={currentAsset.symbol} color="text-amber-400" icon={currentAsset.icon} />
               <MetricCard title={t.trading_mode} value={tradingMode === 'REGULAR' ? t.mode_regular : tradingMode === 'SAFE' ? t.mode_safe : t.mode_ultra} subValue={tradingMode === 'ULTRA_SAFE' ? t.risk_low : t.risk_med} color="text-blue-400" icon="🛡️" />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div className="lg:col-span-2 space-y-6">
-                <div className="glass-panel rounded-xl p-4 h-[500px] flex flex-col relative">
+                
+                {/* CHART CONTAINER - ADJUSTS BASED ON BROKER */}
+                <div className={`glass-panel rounded-xl p-4 h-[500px] flex flex-col relative border-t-4 
+                    ${brokerConnection?.brokerName === 'EXNESS' ? 'border-t-[#ffcc00] bg-[#1e1e1e]' : 
+                      brokerConnection?.brokerName === 'META_TRADER_5' ? 'border-t-green-600 bg-black' : 'border-t-slate-600'}`}>
+                  
                   <div className="flex flex-wrap items-center justify-between mb-4 gap-2 border-b border-slate-700 pb-2">
                       <div className="flex items-center gap-2">
                         <h3 className="font-bold text-lg text-gray-300">{currentAsset.name}</h3>
-                        <span className="px-2 py-0.5 rounded bg-slate-800 text-xs text-amber-400 font-mono">{currentAsset.symbol}</span>
+                        <span className={`px-2 py-0.5 rounded text-xs font-mono 
+                             ${brokerConnection?.brokerName === 'EXNESS' ? 'bg-[#ffcc00] text-black font-bold' : 'bg-slate-800 text-amber-400'}`}>
+                             {brokerConnection?.brokerName || 'GLOBAL'} FEED
+                        </span>
                       </div>
                       
                       <div className="flex flex-wrap items-center gap-2">
@@ -583,7 +667,15 @@ const App: React.FC = () => {
                           </div>
                       </div>
                   </div>
-                  <div className="flex-1 w-full min-h-0"><Chart data={candles} type={chartType} /></div>
+                  <div className="flex-1 w-full min-h-0 relative z-0">
+                      <Chart 
+                        data={candles} 
+                        type={chartType} 
+                        broker={brokerConnection?.brokerName || 'META_TRADER_5'}
+                        symbol={currentAsset.symbol}
+                        timeframe={timeframe}
+                      />
+                  </div>
                 </div>
                 
                 <div className="glass-panel rounded-xl p-5 border border-slate-700">
@@ -636,25 +728,51 @@ const App: React.FC = () => {
               <div className="lg:col-span-1 flex flex-col gap-4 h-full">
                 <PriceAlerts currentPrice={candles.length > 0 ? candles[candles.length - 1].close : 0} alerts={alerts} addAlert={(p) => setAlerts(prev => [...prev, {id:Math.random().toString(), price:p, condition: p > (candles[candles.length-1]?.close||0)?'ABOVE':'BELOW', createdPrice: candles[candles.length-1]?.close||0, symbol: currentAsset.symbol}])} removeAlert={(id) => setAlerts(prev => prev.filter(a => a.id !== id))} lang={lang} />
                 
-                <div className="glass-panel rounded-xl p-4 flex-1 flex flex-col min-h-[500px]">
+                {/* ECONOMIC CALENDAR WIDGET */}
+                <div className="max-h-[300px]">
+                   <NewsCalendar events={economicEvents} lang={lang} />
+                </div>
+
+                <div className="glass-panel rounded-xl p-4 flex-1 flex flex-col min-h-[300px]">
                   <h3 className="font-bold text-lg text-gray-300 mb-4 border-b border-slate-700 pb-2">{t.trade_log}</h3>
                   <div className="flex-1 overflow-y-auto space-y-2 pr-2" ref={scrollRef}>
                     {trades.map((trade) => (
-                      <div key={trade.id} className="bg-slate-800/50 p-3 rounded border border-slate-700 flex justify-between items-center">
-                        <div>
+                      <div key={trade.id} className="bg-slate-800/50 p-3 rounded border border-slate-700 flex justify-between items-start relative overflow-hidden">
+                        {trade.isSecured && (
+                             <div className="absolute top-0 right-0 w-2 h-2 bg-green-500 rounded-bl-lg animate-pulse" title="Zero Loss Active"></div>
+                        )}
+                        <div className="flex flex-col gap-1">
                           <div className="flex items-center gap-2">
-                            <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${trade.type === SignalType.BUY ? 'bg-green-900/50 text-green-400' : 'bg-red-900/50 text-red-400'}`}>{trade.type}</span>
-                            <span className="text-[10px] text-gray-500">{trade.symbol}</span>
+                            <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${trade.type === SignalType.BUY ? 'bg-green-900/50 text-green-400' : 'bg-red-900/50 text-red-400'}`}>{trade.type}</span>
+                            <span className="text-[10px] text-gray-500 font-bold">{trade.symbol}</span>
+                            <span className="text-[10px] font-mono bg-slate-700 px-1 rounded text-amber-300 border border-slate-600">Lot: {trade.lotSize}</span>
                           </div>
-                          <span className="text-xs text-gray-400 font-mono block mt-1">@{trade.entryPrice.toFixed(2)}</span>
+                          <div className="text-[10px] text-gray-400 font-mono flex items-center gap-1 mt-1">
+                             <span className="text-gray-500">In:</span>
+                             <span className="text-white">{trade.entryPrice.toFixed(2)}</span>
+                             {trade.exitPrice && (
+                                 <>
+                                    <span className="text-gray-600 mx-1">➜</span>
+                                    <span className="text-gray-500">Out:</span>
+                                    <span className="text-white">{trade.exitPrice.toFixed(2)}</span>
+                                 </>
+                             )}
+                          </div>
+                          {trade.status === 'OPEN' && trade.isSecured && <span className="text-[9px] text-green-400 border border-green-900 px-1 rounded bg-green-900/10 w-fit">Risk Free</span>}
                         </div>
-                        <div className="text-right">
+                        
+                        <div className="flex flex-col items-end">
                           {trade.status === 'CLOSED' ? (
-                            <span className={`font-mono font-bold ${trade.profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>{trade.profit >= 0 ? '+' : ''}{trade.profit.toFixed(2)}$</span>
-                          ) : <span className="text-amber-400 text-xs animate-pulse">OPEN</span>}
+                            <span className={`font-mono font-bold text-sm ${trade.profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>{trade.profit >= 0 ? '+' : ''}{trade.profit.toFixed(2)}$</span>
+                          ) : <span className="text-amber-400 text-[10px] animate-pulse">Running</span>}
                         </div>
                       </div>
                     ))}
+                    {trades.length === 0 && (
+                        <div className="text-center py-10 text-gray-600 text-sm">
+                            {t.no_trades}
+                        </div>
+                    )}
                   </div>
                 </div>
               </div>
