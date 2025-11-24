@@ -2,9 +2,6 @@
 import { GoogleGenAI } from "@google/genai";
 import { Candle, MarketAnalysis, SignalType, NewsStatus, Indicators, LanguageCode } from '../types';
 
-// NOTE: In a real scenario, this would be server-side to protect the key.
-// For this frontend-only demo, we use the env var or user input.
-
 export const analyzeMarket = async (
   apiKey: string,
   symbol: string,
@@ -14,7 +11,6 @@ export const analyzeMarket = async (
   language: LanguageCode = 'ar'
 ): Promise<MarketAnalysis> => {
   
-  // Check for empty data to prevent crashes
   if (!candles || candles.length === 0) {
       return {
           signal: SignalType.HOLD,
@@ -22,123 +18,96 @@ export const analyzeMarket = async (
           reasoning: "Insufficient data for analysis",
           trend: 'SIDEWAYS',
           support: 0,
-          resistance: 0
+          resistance: 0,
+          suggested_sl: 0,
+          suggested_tp: 0,
       };
   }
 
-  // Helper: Perform SMART fallback technical analysis when AI is unavailable
-  // UPGRADED: Sniper V6 - Bank Level Order Block Entry
   const performFallbackAnalysis = (errorReason: string): MarketAnalysis => {
       const currentPrice = candles[candles.length - 1].close;
-      const lastCandle = candles[candles.length - 1];
-      const prevCandle = candles[candles.length - 2];
+      const volatility = (candles[candles.length - 1].high - candles[candles.length - 1].low);
+      const isUptrend = indicators.ema20 > indicators.ema50;
       
-      const isUptrend = indicators.ema20 > indicators.ema50; 
-      const momentumBuilding = lastCandle.close > prevCandle.high; 
-
-      // Detailed Scoring System for V6 Strategy (Bank Flow Mimicry)
-      let score = 0;
-      let reasonAr = "";
-      let reasonEn = "";
-      
-      // 1. Trend Direction Priority (Whale Tracker)
-      if (isUptrend) {
-          score += 3;
-          // ENTRY LOGIC: 
-          // A) Momentum Breakout (New High)
-          if (momentumBuilding) score += 4;
-          // B) RSI Clean (Not Overbought yet)
-          if (indicators.rsi < 70 && indicators.rsi > 50) score += 2;
-          
-          if (score >= 7) {
-              reasonAr = "استراتيجية الحيتان: كسر قمة سابقة مع زخم (Momentum). دخول فوري.";
-              reasonEn = "Whale Strategy: Breaking previous high with Momentum. Instant Entry.";
-          }
-      } else {
-          score -= 3;
-          // Sell logic
-          if (lastCandle.close < prevCandle.low) score -= 4;
-          if (indicators.rsi > 30 && indicators.rsi < 50) score -= 2;
-
-          if (score <= -7) {
-              reasonAr = "استراتيجية الحيتان: كسر قاع سابق (Liquidity Sweep). بيع فوري.";
-              reasonEn = "Whale Strategy: Breaking support (Liquidity Sweep). Instant Sell.";
-          }
-      }
-
-      // 2. Volatility Filter
-      const atrSim = (lastCandle.high - lastCandle.low);
-      if (atrSim < (currentPrice * 0.00005)) {
-           score = 0; // Dead market
-      }
-
       let signal = SignalType.HOLD;
-      let calculatedConfidence = 0; 
+      let reasonAr = "انتظار تأكيد من السوق.";
+      let reasonEn = "Waiting for market confirmation.";
 
-      if (score >= 6) {
+      if (isUptrend && indicators.rsi < 65) {
           signal = SignalType.BUY;
-          calculatedConfidence = 99; // Max confidence for fallback
-      } else if (score <= -6) {
+          reasonAr = "اتجاه صاعد مع مؤشر قوة نسبية معتدل. فرصة شراء.";
+          en: "Uptrend with moderate RSI. Buy opportunity.";
+      } else if (!isUptrend && indicators.rsi > 35) {
           signal = SignalType.SELL;
-          calculatedConfidence = 99;
-      } else {
-          reasonAr = "انتظار تجميع سيولة (Accumulation Phase)";
-          reasonEn = "Waiting for Accumulation Phase";
+          reasonAr = "اتجاه هابط مع مؤشر قوة نسبية معتدل. فرصة بيع.";
+          en: "Downtrend with moderate RSI. Sell opportunity.";
       }
+
+      const slDistance = volatility * 1.5 || 2.0;
+      const tpDistance = volatility * 2.5 || 3.5;
 
       return {
         signal,
-        confidence: calculatedConfidence, 
+        confidence: 75, 
         reasoning: language === 'ar' ? reasonAr : reasonEn,
         trend: isUptrend ? 'UP' : 'DOWN',
-        support: parseFloat((currentPrice * 0.995).toFixed(2)),
-        resistance: parseFloat((currentPrice * 1.005).toFixed(2))
+        support: parseFloat((currentPrice - volatility * 2).toFixed(2)),
+        resistance: parseFloat((currentPrice + volatility * 2).toFixed(2)),
+        suggested_sl: signal === SignalType.BUY ? parseFloat((currentPrice - slDistance).toFixed(2)) : parseFloat((currentPrice + slDistance).toFixed(2)),
+        suggested_tp: signal === SignalType.BUY ? parseFloat((currentPrice + tpDistance).toFixed(2)) : parseFloat((currentPrice - tpDistance).toFixed(2)),
       };
   };
 
-  // If no API key is provided, immediately use smart fallback
   if (!apiKey) {
-    return performFallbackAnalysis(language === 'ar' ? "تحليل البنوك (V6 Algo)" : "Bank Algo V6");
+    return performFallbackAnalysis(language === 'ar' ? "تحليل فني تلقائي" : "Automatic TA");
   }
 
   const ai = new GoogleGenAI({ apiKey });
   
   const recentData = candles.slice(-20).map(c => 
-    `[${c.time}] O:${c.open} H:${c.high} L:${c.low} C:${c.close} V:${c.volume}`
+    `[${c.time}] O:${c.open} H:${c.high} L:${c.low} C:${c.close}`
   ).join('\n');
 
   const langMap: Record<string, string> = {
-      'ar': 'Arabic', 'en': 'English', 'fr': 'French', 'es': 'Spanish', 
-      'de': 'German', 'ru': 'Russian', 'zh': 'Chinese', 'tr': 'Turkish', 'hi': 'Hindi'
+      'ar': 'Arabic', 'en': 'English'
   };
 
-  // PROMPT ENGINEERED FOR BANK-LEVEL ACCURACY & ZERO LOSS MENTALITY
   const prompt = `
-    Role: Institutional Trader & Bank Analyst (Smart Money Concepts).
-    Task: Analyze ${symbol} for a "Zero Loss" high-probability entry.
-    
-    Goal: We only enter trades where we can immediately secure profit. We emulate "Market Makers".
-    
+    Role: Elite Quantitative Analyst and Institutional Trader, embodying the knowledge of every major trading book and bank's research paper. Your strategy is based on Smart Money Concepts (SMC) and identifying market maker intentions.
+    Task: Analyze ${symbol} for a high-probability, "zero-loss" trade entry. We hunt for setups with at least a 1:2.5 Risk-to-Reward ratio.
+
     Methodology:
-    1. Identify "Liquidity Sweeps" (Stop hunts).
-    2. Look for "Order Blocks" (OB) and "Fair Value Gaps" (FVG).
-    3. Analyze Candle Wicks: Long wicks indicate rejection/reversal.
-    4. Trend is King: Do not trade against the EMA trend unless it's a confirmed reversal pattern.
-    
+    1.  Liquidity Analysis: Identify key liquidity pools (old highs/lows) that market makers are likely to target.
+    2.  Structural Mapping: Confirm the current market structure (Break of Structure - BOS, Change of Character - CHoCH).
+    3.  Supply & Demand Zones: Pinpoint unmitigated Order Blocks (OB) and Fair Value Gaps (FVG) as entry points.
+    4.  Confirmation: Look for price action confirmation at these zones, such as a sweep of liquidity followed by a strong rejection.
+    5.  Risk Management: Define a precise Stop Loss (SL) just beyond the invalidation point of the structure and a realistic Take Profit (TP) targeting the next major liquidity pool.
+
     Current Technicals:
-    - Trend: ${indicators.ema20 > indicators.ema50 ? "BULLISH (Up)" : "BEARISH (Down)"}
-    - RSI: ${indicators.rsi.toFixed(2)}
-    
-    Recent Price Action (OHLCV):
+    -   Price Action Context: ${indicators.ema20 > indicators.ema50 ? "Bullish momentum (Price > EMA20 > EMA50)" : "Bearish momentum (Price < EMA20 < EMA50)"}
+    -   RSI (14): ${indicators.rsi.toFixed(2)} (Check for divergences)
+    -   MACD Histogram: ${indicators.macd.histogram.toFixed(4)} (Indicates momentum strength/weakness)
+
+    Recent Price Action (Last 20 Candles):
     ${recentData}
-    
-    Output Rules:
-    - Signal BUY only if price is bouncing off a Bullish Order Block or breaking structure (BOS) upwards.
-    - Signal SELL only if price is rejecting a Bearish Order Block or breaking structure downwards.
-    - If ambiguous, output HOLD. We want 99% accuracy.
-    
-    Output JSON (Language: ${langMap[language] || 'English'}):
-    { "signal": "BUY"|"SELL"|"HOLD", "confidence": 90-100, "trend": "UP"|"DOWN", "support": number, "resistance": number, "reasoning": "Explain using terms like Liquidity, BOS, FVG, Institutional Flow" }
+
+    **Your Decision & Output (JSON ONLY):**
+    -   Analyze the data using the SMC methodology.
+    -   If a high-probability (95%+ confidence) setup exists, signal BUY or SELL. Otherwise, signal HOLD. We wait patiently for A+ setups only.
+    -   The 'reasoning' must be a concise, elite-level explanation in ${langMap[language] || 'English'}, mentioning specific SMC terms (e.g., "Price swept liquidity at 2350 before showing displacement, targeting FVG at 2365").
+    -   Calculate a tight but safe 'suggested_sl' and a logical 'suggested_tp'.
+
+    Output JSON format:
+    {
+      "signal": "BUY" | "SELL" | "HOLD",
+      "confidence": number (0-100),
+      "trend": "UP" | "DOWN" | "SIDEWAYS",
+      "support": number,
+      "resistance": number,
+      "reasoning": "Elite analysis in the requested language.",
+      "suggested_sl": number,
+      "suggested_tp": number
+    }
   `;
 
   try {
@@ -169,11 +138,13 @@ export const analyzeMarket = async (
       reasoning: data.reasoning,
       trend: data.trend,
       support: data.support,
-      resistance: data.resistance
+      resistance: data.resistance,
+      suggested_sl: data.suggested_sl,
+      suggested_tp: data.suggested_tp
     };
 
   } catch (error: any) {
     console.warn("AI Analysis switched to Fallback due to error:", error);
-    return performFallbackAnalysis("AI Timeout - V6 Institutional Mode");
+    return performFallbackAnalysis("AI Timeout - Institutional Fallback");
   }
 };

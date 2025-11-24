@@ -19,14 +19,13 @@ export interface Trade {
   type: SignalType;
   entryPrice: number;
   exitPrice?: number;
-  slPrice: number;       // Dynamic Stop Loss Price
-  highestReached: number; // Highest price reached since entry (for trailing)
+  slPrice: number;
+  tpPrice?: number; // Take Profit price suggested by AI
   lotSize: number;
   profit: number;
   timestamp: number;
   status: 'OPEN' | 'CLOSED';
   symbol: string;
-  isSecured?: boolean;   // Visual flag for "Risk Free" status
 }
 
 export interface Indicators {
@@ -52,9 +51,11 @@ export interface MarketAnalysis {
   trend: 'UP' | 'DOWN' | 'SIDEWAYS';
   support: number;
   resistance: number;
+  suggested_sl: number; // Renamed for clarity
+  suggested_tp: number; // Renamed for clarity
 }
 
-export type TradingMode = 'REGULAR' | 'SAFE' | 'ULTRA_SAFE';
+export type TradingMode = 'SCALPING' | 'SWING' | 'SAFE';
 
 export interface BotConfig {
   riskPerTrade: number;
@@ -107,7 +108,7 @@ export interface BrokerConnection {
   latency: number;
 }
 
-export type LanguageCode = 'ar' | 'en' | 'fr' | 'es' | 'de' | 'ru' | 'zh' | 'tr' | 'hi';
+export type LanguageCode = 'ar' | 'en';
 
 export type AuthView = 'TERMS' | 'LOGIN' | 'REGISTER' | 'PLANS' | 'ACTIVATE' | 'FORGOT' | 'DASHBOARD';
 
@@ -161,4 +162,12 @@ export interface UserEntity {
   plan: string;
   ip: string;
   location: string;
+}
+
+export interface UserFeedback {
+  id: string;
+  userEmail: string;
+  rating: number;
+  comment: string;
+  timestamp: number;
 }
