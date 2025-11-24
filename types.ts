@@ -26,6 +26,7 @@ export interface Trade {
   timestamp: number;
   status: 'OPEN' | 'CLOSED';
   symbol: string;
+  breakevenTriggered?: boolean;
 }
 
 export interface Indicators {

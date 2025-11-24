@@ -73,29 +73,29 @@ export const analyzeMarket = async (
   };
 
   const prompt = `
-    Role: Elite Quantitative Analyst and Institutional Trader, embodying the knowledge of every major trading book and bank's research paper. Your strategy is based on Smart Money Concepts (SMC) and identifying market maker intentions.
-    Task: Analyze ${symbol} for a high-probability, "zero-loss" trade entry. We hunt for setups with at least a 1:2.5 Risk-to-Reward ratio.
+    Role: Aggressive High-Frequency AI Trader for ${symbol}. Your goal is to capture quick profits by identifying short-term momentum shifts. You must act decisively and quickly, generating more frequent trading signals when conditions are favorable.
 
     Methodology:
-    1.  Liquidity Analysis: Identify key liquidity pools (old highs/lows) that market makers are likely to target.
-    2.  Structural Mapping: Confirm the current market structure (Break of Structure - BOS, Change of Character - CHoCH).
-    3.  Supply & Demand Zones: Pinpoint unmitigated Order Blocks (OB) and Fair Value Gaps (FVG) as entry points.
-    4.  Confirmation: Look for price action confirmation at these zones, such as a sweep of liquidity followed by a strong rejection.
-    5.  Risk Management: Define a precise Stop Loss (SL) just beyond the invalidation point of the structure and a realistic Take Profit (TP) targeting the next major liquidity pool.
+    1.  Momentum Check: Is the MACD histogram positive and growing (for BUY) or negative and growing (for SELL)?
+    2.  Trend Confirmation: Is the price above the key EMAs (ema20 > ema50) for a BUY, or below for a SELL?
+    3.  RSI Confirmation: Is RSI in a favorable range (e.g., not overbought >75 for a BUY, not oversold <25 for a SELL)?
+    4.  Entry Point: Use the last candle's close price as the entry point.
+    5.  Risk Management: Calculate a tight 'suggested_sl' based on recent volatility (e.g., the low of the last 3-5 candles for a BUY) and a 'suggested_tp' with a minimum 1:1.5 Risk-to-Reward ratio.
 
     Current Technicals:
     -   Price Action Context: ${indicators.ema20 > indicators.ema50 ? "Bullish momentum (Price > EMA20 > EMA50)" : "Bearish momentum (Price < EMA20 < EMA50)"}
-    -   RSI (14): ${indicators.rsi.toFixed(2)} (Check for divergences)
-    -   MACD Histogram: ${indicators.macd.histogram.toFixed(4)} (Indicates momentum strength/weakness)
+    -   RSI (14): ${indicators.rsi.toFixed(2)} (Use this to avoid extreme conditions)
+    -   MACD Histogram: ${indicators.macd.histogram.toFixed(4)} (Key indicator for momentum strength/weakness)
+    -   Last Close Price: ${candles[candles.length - 1].close}
 
     Recent Price Action (Last 20 Candles):
     ${recentData}
 
     **Your Decision & Output (JSON ONLY):**
-    -   Analyze the data using the SMC methodology.
-    -   If a high-probability (95%+ confidence) setup exists, signal BUY or SELL. Otherwise, signal HOLD. We wait patiently for A+ setups only.
-    -   The 'reasoning' must be a concise, elite-level explanation in ${langMap[language] || 'English'}, mentioning specific SMC terms (e.g., "Price swept liquidity at 2350 before showing displacement, targeting FVG at 2365").
-    -   Calculate a tight but safe 'suggested_sl' and a logical 'suggested_tp'.
+    -   Analyze the data using the methodology above. Be proactive in signaling BUY or SELL if momentum and trend align.
+    -   A confidence level of 75% or higher is sufficient to enter a trade. If conditions are ambiguous or risky, signal HOLD.
+    -   The 'reasoning' must be a concise, direct explanation in ${langMap[language] || 'English'}, mentioning key indicators (e.g., "MACD crossing up, RSI at 55, price holding above EMAs, signaling a BUY entry.").
+    -   Calculate a precise 'suggested_sl' and 'suggested_tp'.
 
     Output JSON format:
     {
@@ -104,7 +104,7 @@ export const analyzeMarket = async (
       "trend": "UP" | "DOWN" | "SIDEWAYS",
       "support": number,
       "resistance": number,
-      "reasoning": "Elite analysis in the requested language.",
+      "reasoning": "Direct analysis in the requested language.",
       "suggested_sl": number,
       "suggested_tp": number
     }

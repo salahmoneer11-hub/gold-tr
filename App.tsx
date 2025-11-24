@@ -61,8 +61,14 @@ const AIAnalysisPanel: React.FC<{ analysis: MarketAnalysis | null, lang: Languag
 
     return (
         <div className="glass-panel p-4 rounded-2xl flex flex-col gap-4 border-t-4 border-t-purple-500/50 h-full">
-            <h3 className="font-bold text-gray-200 text-sm flex items-center gap-2">
-                <span>🧠</span> {t.ai_analysis}
+            <h3 className="font-bold text-gray-200 text-sm flex items-center justify-between">
+                <span className="flex items-center gap-2">
+                    <span>🧠</span> {t.ai_analysis}
+                </span>
+                <span className="flex items-center gap-1.5 bg-slate-900/50 px-2 py-1 rounded-md border border-slate-700">
+                    <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse shadow-[0_0_5px_theme(colors.green.400)]"></div>
+                    <span className="text-[10px] text-green-300 font-mono font-bold">{t.live_update}</span>
+                </span>
             </h3>
             <div className={`text-center p-3 rounded-lg border ${signalBg}`}>
                 <div className="text-xs text-gray-400 uppercase tracking-widest">{t.signal}</div>
@@ -153,7 +159,10 @@ const App: React.FC = () => {
     setToasts(prev => [...prev, newToast].slice(-5));
   };
 
-  const handleLogin = (email: string): boolean => {
+  const handleLogin = (email: string, password?: string): boolean => {
+      if (email.toLowerCase() !== ADMIN_EMAIL && password !== 'password') {
+        return false;
+      }
       setCurrentUser(email);
       localStorage.setItem('gold_ai_user_email', email);
       addToast(t.toast_login_success, t.welcome_back, 'success');
@@ -196,20 +205,50 @@ const App: React.FC = () => {
         const currentPrice = newCandle.close;
         setTrades(prevTrades => prevTrades.map(trade => {
             if (trade.status === 'CLOSED') return trade;
+
+            let updatedTrade = { ...trade };
             const profitPoints = trade.type === 'BUY' ? (currentPrice - trade.entryPrice) : (trade.entryPrice - currentPrice);
             const profitValue = profitPoints * trade.lotSize * 100;
-            let newStatus: 'OPEN' | 'CLOSED' = trade.status;
-            let exitPrice = trade.exitPrice;
+            updatedTrade.profit = profitValue;
             
-            if (trade.type === 'BUY') {
-                if (currentPrice <= trade.slPrice) { newStatus = 'CLOSED'; exitPrice = trade.slPrice; }
-                if (trade.tpPrice && currentPrice >= trade.tpPrice) { newStatus = 'CLOSED'; exitPrice = trade.tpPrice; }
-            } else { // SELL
-                if (currentPrice >= trade.slPrice) { newStatus = 'CLOSED'; exitPrice = trade.slPrice; }
-                if (trade.tpPrice && currentPrice <= trade.tpPrice) { newStatus = 'CLOSED'; exitPrice = trade.tpPrice; }
+            // Trailing Stop to Breakeven Logic
+            const slDistance = Math.abs(trade.entryPrice - trade.slPrice);
+            if (!trade.breakevenTriggered && profitPoints > slDistance * 0.5) {
+                updatedTrade.slPrice = trade.entryPrice;
+                updatedTrade.breakevenTriggered = true;
+                addToast(t.breakeven_title, `${t.breakeven_msg} #${trade.id.slice(0,4)}`, 'info');
             }
 
-            return { ...trade, profit: profitValue, status: newStatus, exitPrice: exitPrice };
+            // Check for SL/TP hit
+            if (trade.type === 'BUY') {
+                if (currentPrice <= updatedTrade.slPrice) { 
+                    updatedTrade.status = 'CLOSED'; 
+                    updatedTrade.exitPrice = updatedTrade.slPrice; 
+                }
+                if (trade.tpPrice && currentPrice >= trade.tpPrice) { 
+                    updatedTrade.status = 'CLOSED'; 
+                    updatedTrade.exitPrice = trade.tpPrice; 
+                }
+            } else { // SELL
+                if (currentPrice >= updatedTrade.slPrice) { 
+                    updatedTrade.status = 'CLOSED'; 
+                    updatedTrade.exitPrice = updatedTrade.slPrice; 
+                }
+                if (trade.tpPrice && currentPrice <= trade.tpPrice) { 
+                    updatedTrade.status = 'CLOSED'; 
+                    updatedTrade.exitPrice = trade.tpPrice; 
+                }
+            }
+
+            // Finalize profit if closed
+            if (updatedTrade.status === 'CLOSED') {
+                const finalProfitPoints = trade.type === 'BUY' 
+                    ? (updatedTrade.exitPrice! - trade.entryPrice) 
+                    : (trade.entryPrice - updatedTrade.exitPrice!);
+                updatedTrade.profit = finalProfitPoints * trade.lotSize * 100;
+            }
+
+            return updatedTrade;
         }));
     });
 
@@ -226,7 +265,7 @@ const App: React.FC = () => {
         const analysisResult = await analyzeMarket(process.env.API_KEY || '', currentAsset.symbol, candles, techIndicators, getSimulatedNews(), lang);
         setAnalysis(analysisResult);
 
-        if (analysisResult.signal !== SignalType.HOLD && analysisResult.confidence > 85) { // Higher confidence threshold
+        if (analysisResult.signal !== SignalType.HOLD && analysisResult.confidence >= 70) { // Confidence threshold lowered to 70 for more aggressive trading
             const newTrade: Trade = {
                 id: Math.random().toString(36).substr(2, 9),
                 type: analysisResult.signal,
@@ -237,12 +276,13 @@ const App: React.FC = () => {
                 profit: 0,
                 timestamp: Date.now(),
                 status: 'OPEN',
-                symbol: currentAsset.symbol
+                symbol: currentAsset.symbol,
+                breakevenTriggered: false
             };
             setTrades(prev => [newTrade, ...prev]);
-            addToast(t.new_trade, `${analysisResult.signal} @ ${currentPrice}`, 'info');
+            addToast(t.new_trade, `${analysisResult.signal} @ ${currentPrice.toFixed(2)}`, 'info');
         }
-    }, 5000);
+    }, 1000); // Increased frequency to 1 second for instant market analysis
 
     return () => clearInterval(botLoop);
   }, [isRunning, candles, techIndicators, trades, lotSize, lang, currentAsset]);
@@ -317,24 +357,46 @@ const App: React.FC = () => {
             <div className="lg:col-span-12 col-span-1 glass-panel p-3 rounded-2xl flex flex-col min-h-[300px] max-h-[60vh] border-t-4 border-t-blue-500/20">
                 <h3 className="font-bold text-gray-200 mb-2 border-b border-white/5 pb-2 flex justify-between items-center text-sm">
                     <span className="flex items-center gap-2">📜 {t.trade_log}</span>
-                    <span className="text-[9px] text-blue-300 bg-blue-900/30 px-2 py-0.5 rounded border border-blue-500/30">Live</span>
+                     <span className="text-[9px] text-blue-300 bg-blue-900/30 px-2 py-0.5 rounded border border-blue-500/30">Live</span>
                 </h3>
                 <div className="overflow-y-auto flex-1 pr-1 custom-scrollbar">
                     {trades.length === 0 ? (<div className="text-center text-gray-500 py-10 flex flex-col items-center justify-center h-full"><div className="w-12 h-12 bg-slate-800 rounded-full flex items-center justify-center mb-2 text-2xl opacity-50">⚡</div><span className="text-xs">{t.no_trades}</span></div>) : (
-                        <div className="flex flex-col gap-2">
+                        <table className="w-full text-xs">
+                            <thead>
+                                <tr className="text-slate-500 uppercase text-[10px] font-bold">
+                                    <th className="p-2 text-left">{t.log_asset}</th>
+                                    <th className="p-2 text-left">{t.log_type}</th>
+                                    <th className="p-2 text-center">{t.lot_size}</th>
+                                    <th className="p-2 text-left">{t.log_price}</th>
+                                    <th className="p-2 text-right">{t.log_pl}</th>
+                                    <th className="p-2 text-center">{t.log_status}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
                             {trades.map(trade => (
-                                <div key={trade.id} className="bg-slate-900/80 rounded border border-slate-700/50 p-2 flex justify-between items-center group hover:bg-slate-800 transition">
-                                    <div className="flex flex-col">
-                                        <div className="flex items-center gap-2"><span className={`text-[10px] font-bold px-1.5 rounded ${trade.type === 'BUY' ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>{trade.type}</span><span className="text-xs text-gray-300 font-bold">{trade.symbol}</span></div>
-                                        <span className="text-[10px] text-gray-500 mt-0.5">@ {trade.entryPrice.toFixed(2)}</span>
-                                    </div>
-                                    <div className="text-right">
-                                        <div className={`font-mono text-sm font-bold ${trade.profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>{trade.profit >= 0 ? '+' : ''}{trade.profit.toFixed(2)}$</div>
-                                        <div className="flex items-center justify-end gap-1"><span className={`w-1.5 h-1.5 rounded-full ${trade.status === 'OPEN' ? 'bg-blue-500 animate-pulse' : 'bg-gray-600'}`}></span><span className="text-[9px] text-gray-500">{trade.status}</span></div>
-                                    </div>
-                                </div>
+                                <tr key={trade.id} className="border-t border-slate-800/50 hover:bg-slate-800/30 transition">
+                                    <td className="p-2 font-bold text-slate-300">{trade.symbol}</td>
+                                    <td className="p-2">
+                                        <span className={`font-bold px-2 py-0.5 rounded-full text-[10px] ${trade.type === 'BUY' ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>{trade.type}</span>
+                                    </td>
+                                    <td className="p-2 text-center font-mono text-slate-400">{trade.lotSize.toFixed(2)}</td>
+                                    <td className="p-2 font-mono text-slate-300">
+                                        {trade.entryPrice.toFixed(2)}
+                                        {trade.exitPrice ? <span className="text-slate-500"> → {trade.exitPrice.toFixed(2)}</span> : ''}
+                                    </td>
+                                    <td className={`p-2 text-right font-mono font-bold ${trade.profit >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                        {trade.profit >= 0 ? '+' : ''}{trade.profit.toFixed(2)}$
+                                    </td>
+                                    <td className="p-2 text-center">
+                                       <div className="flex items-center justify-center gap-1.5">
+                                         <span className={`w-2 h-2 rounded-full ${trade.status === 'OPEN' ? 'bg-blue-500 animate-pulse' : 'bg-gray-600'}`}></span>
+                                         <span className="text-[10px] text-gray-400">{trade.status}</span>
+                                       </div>
+                                    </td>
+                                </tr>
                             ))}
-                        </div>
+                            </tbody>
+                        </table>
                     )}
                 </div>
             </div>

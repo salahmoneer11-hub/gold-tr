@@ -61,7 +61,25 @@ export const translations: Record<LanguageCode, any> = {
 
     ai_analysis: "تحليل الذكاء الاصطناعي",
     suggested_sl: "وقف الخسارة المقترح",
-    suggested_tp: "أخذ الربح المقترح"
+    suggested_tp: "أخذ الربح المقترح",
+    live_update: "تحديث مباشر",
+    
+    breakeven_title: "تأمين الصفقة",
+    breakeven_msg: "تم نقل وقف الخسارة إلى نقطة الدخول للصفقة",
+    
+    log_asset: "الأصل",
+    log_type: "النوع",
+    log_price: "السعر",
+    log_pl: "الربح/الخسارة",
+    log_status: "الحالة",
+
+    // New Login Screen
+    welcome_back_title: "أهلاً بعودتك",
+    welcome_back_subtitle: "بوت تداول الذهب بالذكاء الاصطناعي الأكثر تطوراً",
+    login_to_account: "سجل الدخول إلى حسابك",
+    forgot_password: "هل نسيت كلمة المرور؟",
+    continue_with: "أو المتابعة باستخدام",
+    login_error_message: "البريد الإلكتروني أو كلمة المرور غير صحيحة."
   },
   en: {
     app_title: "GOLD AI PRO",
@@ -122,6 +140,24 @@ export const translations: Record<LanguageCode, any> = {
 
     ai_analysis: "AI Analysis",
     suggested_sl: "Suggested SL",
-    suggested_tp: "Suggested TP"
+    suggested_tp: "Suggested TP",
+    live_update: "LIVE",
+    
+    breakeven_title: "Trade Secured",
+    breakeven_msg: "Stop loss moved to breakeven for trade",
+    
+    log_asset: "Asset",
+    log_type: "Type",
+    log_price: "Price",
+    log_pl: "P/L",
+    log_status: "Status",
+
+    // New Login Screen
+    welcome_back_title: "Welcome Back",
+    welcome_back_subtitle: "The most advanced AI Gold Trading Bot on the market.",
+    login_to_account: "Login to your account",
+    forgot_password: "Forgot Password?",
+    continue_with: "Or continue with",
+    login_error_message: "Invalid email or password."
   }
 };
