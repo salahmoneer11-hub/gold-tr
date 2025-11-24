@@ -19,7 +19,8 @@ export interface Trade {
   type: SignalType;
   entryPrice: number;
   exitPrice?: number;
-  slPrice: number;
+  slPrice: number; // The current (potentially trailing) SL price
+  initialSlPrice: number; // The original SL price when the trade was opened
   tpPrice?: number; // Take Profit price suggested by AI
   lotSize: number;
   profit: number;

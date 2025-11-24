@@ -208,16 +208,42 @@ const App: React.FC = () => {
 
             let updatedTrade = { ...trade };
             const profitPoints = trade.type === 'BUY' ? (currentPrice - trade.entryPrice) : (trade.entryPrice - currentPrice);
-            const profitValue = profitPoints * trade.lotSize * 100;
-            updatedTrade.profit = profitValue;
+            updatedTrade.profit = profitPoints * trade.lotSize * 100;
             
-            // Trailing Stop to Breakeven Logic
-            const slDistance = Math.abs(trade.entryPrice - trade.slPrice);
-            if (!trade.breakevenTriggered && profitPoints > slDistance * 0.5) {
+            const initialSlDistance = Math.abs(trade.entryPrice - trade.initialSlPrice);
+
+            // Step 1: Secure at Breakeven
+            if (!trade.breakevenTriggered && profitPoints > initialSlDistance * 0.5) {
                 updatedTrade.slPrice = trade.entryPrice;
                 updatedTrade.breakevenTriggered = true;
                 addToast(t.breakeven_title, `${t.breakeven_msg} #${trade.id.slice(0,4)}`, 'info');
             }
+            
+            // Step 2: Trail Stop in Profit (after breakeven)
+            if (updatedTrade.breakevenTriggered) {
+                let newSlPrice;
+                if (trade.type === 'BUY') {
+                    // Potential new SL is the current price minus the initial risk distance.
+                    const potentialNewSl = currentPrice - initialSlDistance;
+                    // Only move the SL up, never down.
+                    if (potentialNewSl > updatedTrade.slPrice) {
+                        newSlPrice = potentialNewSl;
+                    }
+                } else { // SELL
+                    // For a sell, potential new SL is current price PLUS the distance.
+                    const potentialNewSl = currentPrice + initialSlDistance;
+                    // Only move the SL down, never up.
+                    if (potentialNewSl < updatedTrade.slPrice) {
+                        newSlPrice = potentialNewSl;
+                    }
+                }
+
+                if (newSlPrice !== undefined) {
+                    updatedTrade.slPrice = newSlPrice;
+                    addToast(t.profit_lock_title, `${t.profit_lock_msg} #${trade.id.slice(0,4)} @ ${newSlPrice.toFixed(2)}`, 'success');
+                }
+            }
+
 
             // Check for SL/TP hit
             if (trade.type === 'BUY') {
@@ -241,7 +267,7 @@ const App: React.FC = () => {
             }
 
             // Finalize profit if closed
-            if (updatedTrade.status === 'CLOSED') {
+            if (updatedTrade.status === 'CLOSED' && trade.status === 'OPEN') {
                 const finalProfitPoints = trade.type === 'BUY' 
                     ? (updatedTrade.exitPrice! - trade.entryPrice) 
                     : (trade.entryPrice - updatedTrade.exitPrice!);
@@ -270,6 +296,7 @@ const App: React.FC = () => {
                 id: Math.random().toString(36).substr(2, 9),
                 type: analysisResult.signal,
                 entryPrice: currentPrice,
+                initialSlPrice: analysisResult.suggested_sl,
                 slPrice: analysisResult.suggested_sl,
                 tpPrice: analysisResult.suggested_tp,
                 lotSize,

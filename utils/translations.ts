@@ -66,6 +66,8 @@ export const translations: Record<LanguageCode, any> = {
     
     breakeven_title: "تأمين الصفقة",
     breakeven_msg: "تم نقل وقف الخسارة إلى نقطة الدخول للصفقة",
+    profit_lock_title: "تأمين الأرباح",
+    profit_lock_msg: "تم رفع وقف الخسارة لتأمين الربح للصفقة",
     
     log_asset: "الأصل",
     log_type: "النوع",
@@ -145,6 +147,8 @@ export const translations: Record<LanguageCode, any> = {
     
     breakeven_title: "Trade Secured",
     breakeven_msg: "Stop loss moved to breakeven for trade",
+    profit_lock_title: "Profit Locked",
+    profit_lock_msg: "Stop loss trailed up to lock in profit for trade",
     
     log_asset: "Asset",
     log_type: "Type",
