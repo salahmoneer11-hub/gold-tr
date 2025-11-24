@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { TradingMode, LanguageCode } from '../types';
 import { translations } from '../utils/translations';
 
@@ -11,6 +11,8 @@ interface BotControlProps {
   tradingMode: TradingMode;
   setTradingMode: (mode: TradingMode) => void;
   lang: LanguageCode;
+  hasOpenTrades: boolean;
+  onSetManualTp: (price: number) => void;
 }
 
 const BotControl: React.FC<BotControlProps> = ({ 
@@ -20,9 +22,20 @@ const BotControl: React.FC<BotControlProps> = ({
   setLotSize,
   tradingMode,
   setTradingMode,
-  lang
+  lang,
+  hasOpenTrades,
+  onSetManualTp,
 }) => {
   const t = translations[lang];
+  const [manualTp, setManualTp] = useState('');
+
+  const handleSetTp = () => {
+    const price = parseFloat(manualTp);
+    if (!isNaN(price) && price > 0) {
+      onSetManualTp(price);
+      setManualTp('');
+    }
+  };
 
   return (
     <div className="glass-panel p-5 rounded-2xl flex flex-col gap-5 relative z-30 border-t-4 border-amber-500/50 shadow-lg">
@@ -90,6 +103,34 @@ const BotControl: React.FC<BotControlProps> = ({
             </div>
         </div>
       </div>
+
+      {/* Manual TP Section */}
+      <div className="space-y-2 pt-4 border-t border-slate-700/50">
+          <label className="block text-xs font-bold text-gray-400 uppercase tracking-wider">{t.manual_tp_title}</label>
+          <div className="flex items-center gap-2">
+            <input
+              type="number"
+              step="0.01"
+              placeholder="2350.50"
+              value={manualTp}
+              onChange={(e) => setManualTp(e.target.value)}
+              className="w-full bg-slate-950 border border-slate-700 rounded-lg p-2 text-white focus:ring-1 focus:ring-green-500 focus:border-green-500 outline-none font-mono text-base"
+              disabled={!hasOpenTrades}
+            />
+            <button
+              onClick={handleSetTp}
+              disabled={!hasOpenTrades || !manualTp}
+              className={`px-4 py-2 rounded-lg text-sm font-bold transition
+              ${(!hasOpenTrades || !manualTp) 
+                ? 'bg-slate-700 text-slate-500 cursor-not-allowed'
+                : 'bg-green-600 hover:bg-green-500 text-white shadow-lg shadow-green-900/20'
+              }`}
+            >
+              {t.set_tp_btn}
+            </button>
+          </div>
+      </div>
+
     </div>
   );
 };

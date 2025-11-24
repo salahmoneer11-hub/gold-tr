@@ -85,8 +85,9 @@ const AIAnalysisPanel: React.FC<{ analysis: MarketAnalysis | null, lang: Languag
                 </div>
             </div>
 
-            <div className="bg-slate-900/50 p-3 rounded-lg border border-slate-700 max-h-28 overflow-y-auto custom-scrollbar flex-1">
-                <p className="text-xs text-gray-300 italic">{reasoning}</p>
+            <div className="bg-slate-900/50 p-3 rounded-lg border border-slate-700 max-h-64 overflow-y-auto custom-scrollbar flex-1">
+                <h4 className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-2">{t.reasoning}</h4>
+                <p className="text-xs text-gray-300 whitespace-pre-wrap">{reasoning}</p>
             </div>
             
             <div className="grid grid-cols-2 gap-3 text-xs">
@@ -115,6 +116,7 @@ const App: React.FC = () => {
   const [userFeedbacks, setUserFeedbacks] = useState<UserFeedback[]>([]);
 
   const [brokerConnection, setBrokerConnection] = useState<BrokerConnection | null>(null);
+  const [isBrokerModalOpen, setIsBrokerModalOpen] = useState(false);
 
   const [lotSize, setLotSize] = useState(1.0);
   const [tradingMode, setTradingMode] = useState<TradingMode>('SAFE');
@@ -179,9 +181,40 @@ const App: React.FC = () => {
     localStorage.removeItem('gold_ai_user_email');
     setCurrentUser('');
     setIsRunning(false);
+    setBrokerConnection(null);
     setView('LOGIN');
   };
   
+  const handleConnectBroker = (broker: BrokerName, server: string, accountId: string) => {
+    const latency = Math.floor(Math.random() * 40) + 10;
+    const newConnection: BrokerConnection = {
+        isConnected: true,
+        brokerName: broker,
+        server: server,
+        accountId: accountId,
+        latency: latency,
+    };
+    setBrokerConnection(newConnection);
+    setIsBrokerModalOpen(false);
+    addToast(t.connection_success_title, `${t.connection_success_msg} ${broker}`, 'success');
+  };
+
+  const handleSetManualTp = (price: number) => {
+    if (isNaN(price) || price <= 0) {
+      addToast(t.manual_tp_error_title, t.manual_tp_error_msg, 'error');
+      return;
+    }
+    setTrades(prevTrades =>
+      prevTrades.map(trade => {
+        if (trade.status === 'OPEN') {
+          return { ...trade, tpPrice: price };
+        }
+        return trade;
+      })
+    );
+    addToast(t.manual_tp_success_title, `${t.manual_tp_success_msg} ${price}`, 'success');
+  };
+
   useEffect(() => {
     fetchHistoricalData(currentAsset.symbol, timeframe).then(data => {
         if(data.length > 0) {
@@ -223,16 +256,12 @@ const App: React.FC = () => {
             if (updatedTrade.breakevenTriggered) {
                 let newSlPrice;
                 if (trade.type === 'BUY') {
-                    // Potential new SL is the current price minus the initial risk distance.
                     const potentialNewSl = currentPrice - initialSlDistance;
-                    // Only move the SL up, never down.
                     if (potentialNewSl > updatedTrade.slPrice) {
                         newSlPrice = potentialNewSl;
                     }
                 } else { // SELL
-                    // For a sell, potential new SL is current price PLUS the distance.
                     const potentialNewSl = currentPrice + initialSlDistance;
-                    // Only move the SL down, never up.
                     if (potentialNewSl < updatedTrade.slPrice) {
                         newSlPrice = potentialNewSl;
                     }
@@ -244,25 +273,25 @@ const App: React.FC = () => {
                 }
             }
 
-
             // Check for SL/TP hit
+            const effectiveTp = updatedTrade.manualTpPrice || updatedTrade.tpPrice;
             if (trade.type === 'BUY') {
                 if (currentPrice <= updatedTrade.slPrice) { 
                     updatedTrade.status = 'CLOSED'; 
                     updatedTrade.exitPrice = updatedTrade.slPrice; 
                 }
-                if (trade.tpPrice && currentPrice >= trade.tpPrice) { 
+                if (effectiveTp && currentPrice >= effectiveTp) { 
                     updatedTrade.status = 'CLOSED'; 
-                    updatedTrade.exitPrice = trade.tpPrice; 
+                    updatedTrade.exitPrice = effectiveTp; 
                 }
             } else { // SELL
                 if (currentPrice >= updatedTrade.slPrice) { 
                     updatedTrade.status = 'CLOSED'; 
                     updatedTrade.exitPrice = updatedTrade.slPrice; 
                 }
-                if (trade.tpPrice && currentPrice <= trade.tpPrice) { 
+                if (effectiveTp && currentPrice <= effectiveTp) { 
                     updatedTrade.status = 'CLOSED'; 
-                    updatedTrade.exitPrice = trade.tpPrice; 
+                    updatedTrade.exitPrice = effectiveTp; 
                 }
             }
 
@@ -291,7 +320,7 @@ const App: React.FC = () => {
         const analysisResult = await analyzeMarket(process.env.API_KEY || '', currentAsset.symbol, candles, techIndicators, getSimulatedNews(), lang);
         setAnalysis(analysisResult);
 
-        if (analysisResult.signal !== SignalType.HOLD && analysisResult.confidence >= 70) { // Confidence threshold lowered to 70 for more aggressive trading
+        if (analysisResult.signal !== SignalType.HOLD && analysisResult.confidence >= 70) {
             const newTrade: Trade = {
                 id: Math.random().toString(36).substr(2, 9),
                 type: analysisResult.signal,
@@ -309,7 +338,7 @@ const App: React.FC = () => {
             setTrades(prev => [newTrade, ...prev]);
             addToast(t.new_trade, `${analysisResult.signal} @ ${currentPrice.toFixed(2)}`, 'info');
         }
-    }, 1000); // Increased frequency to 1 second for instant market analysis
+    }, 1000);
 
     return () => clearInterval(botLoop);
   }, [isRunning, candles, techIndicators, trades, lotSize, lang, currentAsset]);
@@ -341,6 +370,25 @@ const App: React.FC = () => {
           </h1>
         </div>
         <div className="flex items-center gap-4">
+          <button 
+            onClick={() => setIsBrokerModalOpen(true)}
+            className={`px-4 py-2 rounded-lg text-xs font-bold transition flex items-center gap-2 border
+              ${brokerConnection 
+                ? 'bg-green-900/30 border-green-500/30 text-green-300' 
+                : 'bg-red-900/30 border-red-500/30 text-red-300 hover:bg-red-900/50'}`}
+          >
+            {brokerConnection ? (
+              <>
+                <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse shadow-[0_0_4px_theme(colors.green.400)]"></div>
+                <span>{brokerConnection.brokerName.replace(/_/g, ' ')} | {brokerConnection.latency}ms</span>
+              </>
+            ) : (
+              <>
+                <span>🔌</span>
+                <span>{t.connect_broker_btn}</span>
+              </>
+            )}
+          </button>
           <AssetSelector selectedAsset={currentAsset} onSelectAsset={setCurrentAsset} lang={lang} />
           <LanguageSelector currentLang={lang} onSelect={setLang} label="" />
           <div className="relative group">
@@ -376,7 +424,17 @@ const App: React.FC = () => {
 
             {/* Right Sidebar */}
             <div className="lg:col-span-3 col-span-1 flex flex-col gap-4">
-                <BotControl isRunning={isRunning} onToggle={toggleBot} lotSize={lotSize} setLotSize={setLotSize} tradingMode={tradingMode} setTradingMode={setTradingMode} lang={lang} />
+                <BotControl 
+                  isRunning={isRunning} 
+                  onToggle={toggleBot} 
+                  lotSize={lotSize} 
+                  setLotSize={setLotSize} 
+                  tradingMode={tradingMode} 
+                  setTradingMode={setTradingMode} 
+                  lang={lang} 
+                  hasOpenTrades={openTrades.length > 0}
+                  onSetManualTp={handleSetManualTp}
+                />
                 <AIAnalysisPanel analysis={analysis} lang={lang} />
             </div>
 
@@ -430,6 +488,7 @@ const App: React.FC = () => {
         </div>
       </main>
       
+      {isBrokerModalOpen && <BrokerConnect onConnect={handleConnectBroker} onClose={() => setIsBrokerModalOpen(false)} lang={lang} />}
       <ToastNotifications toasts={toasts} removeToast={(id) => setToasts(p => p.filter(t => t.id !== id))} />
       <div className="fixed bottom-6 right-6 z-40"><button onClick={() => setShowRating(true)} className="w-10 h-10 rounded-full bg-gradient-to-tr from-slate-800 to-slate-700 text-amber-500 border border-slate-600 hover:scale-110 transition-all duration-300 shadow-xl flex items-center justify-center text-lg hover:rotate-12 hover:shadow-amber-500/20" title={t.rate_us}>★</button></div>
       {showRating && <RatingModal onRate={(rating, comment) => { setUserFeedbacks(prev => [{ id: Date.now().toString(), userEmail: currentUser, rating, comment, timestamp: Date.now() }, ...prev]); addToast(t.rating_thanks, "", "success"); setShowRating(false); }} onClose={() => setShowRating(false)} lang={lang} />}

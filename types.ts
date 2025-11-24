@@ -1,4 +1,5 @@
 
+
 export interface Candle {
   time: string;
   open: number;
@@ -22,6 +23,7 @@ export interface Trade {
   slPrice: number; // The current (potentially trailing) SL price
   initialSlPrice: number; // The original SL price when the trade was opened
   tpPrice?: number; // Take Profit price suggested by AI
+  manualTpPrice?: number; // User-defined Take Profit
   lotSize: number;
   profit: number;
   timestamp: number;

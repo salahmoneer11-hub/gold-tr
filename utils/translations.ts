@@ -32,7 +32,7 @@ export const translations: Record<LanguageCode, any> = {
 
     signal: "الإشارة",
     confidence: "الثقة",
-    reasoning: "التحليل",
+    reasoning: "سبب الدخول",
     support: "الدعم",
     resistance: "المقاومة",
     trade_log: "سجل الصفقات",
@@ -59,13 +59,13 @@ export const translations: Record<LanguageCode, any> = {
     equity: "سيولة الحساب",
     open_trades: "صفقات مفتوحة",
 
-    ai_analysis: "تحليل الذكاء الاصطناعي",
+    ai_analysis: "تحليل حركة السعر والسيولة",
     suggested_sl: "وقف الخسارة المقترح",
     suggested_tp: "أخذ الربح المقترح",
     live_update: "تحديث مباشر",
     
     breakeven_title: "تأمين الصفقة",
-    breakeven_msg: "تم نقل وقف الخسارة إلى نقطة الدخول للصفقة",
+    breakeven_msg: "تم نقل وقف الخsارة إلى نقطة الدخول للصفقة",
     profit_lock_title: "تأمين الأرباح",
     profit_lock_msg: "تم رفع وقف الخسارة لتأمين الربح للصفقة",
     
@@ -75,13 +75,35 @@ export const translations: Record<LanguageCode, any> = {
     log_pl: "الربح/الخسارة",
     log_status: "الحالة",
 
-    // New Login Screen
     welcome_back_title: "أهلاً بعودتك",
     welcome_back_subtitle: "بوت تداول الذهب بالذكاء الاصطناعي الأكثر تطوراً",
     login_to_account: "سجل الدخول إلى حسابك",
     forgot_password: "هل نسيت كلمة المرور؟",
-    continue_with: "أو المتابعة باستخدام",
-    login_error_message: "البريد الإلكتروني أو كلمة المرور غير صحيحة."
+    login_error_message: "البريد الإلكتروني أو كلمة المرور غير صحيحة.",
+    
+    connect_broker_btn: "ربط بمنصة التداول",
+    broker_connect_title: "ربط بمنصة تداول",
+    secure_gateway: "بوابة آمنة",
+    platform: "اختر المنصة",
+    server: "الخادم (Server)",
+    account_id: "رقم الحساب",
+    api_key: "مفتاح API",
+    secret_key: "المفتاح السري",
+    connect_btn: "اتصال",
+    processing: "جاري الاتصال...",
+    connection_failed: "فشل الاتصال",
+    check_credentials: "يرجى التحقق من بيانات الاعتماد والمحاولة مرة أخرى.",
+    handshake_init: "بدء المصادقة مع",
+    verifying_creds: "التحقق من بيانات الاعتماد...",
+    connection_success_title: "تم الاتصال بنجاح",
+    connection_success_msg: "تم الاتصال بـ",
+
+    manual_tp_title: "جني الأرباح اليدوي",
+    set_tp_btn: "تحديد",
+    manual_tp_success_title: "تم تحديث الربح",
+    manual_tp_success_msg: "تم تحديد مستوى جني الربح لجميع الصفقات المفتوحة عند",
+    manual_tp_error_title: "خطأ",
+    manual_tp_error_msg: "الرجاء إدخال سعر صحيح."
   },
   en: {
     app_title: "GOLD AI PRO",
@@ -113,7 +135,7 @@ export const translations: Record<LanguageCode, any> = {
     
     signal: "Signal",
     confidence: "Confidence",
-    reasoning: "Reasoning",
+    reasoning: "Entry Rationale",
     support: "Support",
     resistance: "Resistance",
     trade_log: "Trade Log",
@@ -140,7 +162,7 @@ export const translations: Record<LanguageCode, any> = {
     equity: "Equity",
     open_trades: "Open Trades",
 
-    ai_analysis: "AI Analysis",
+    ai_analysis: "Liquidity & Price Action Analysis",
     suggested_sl: "Suggested SL",
     suggested_tp: "Suggested TP",
     live_update: "LIVE",
@@ -156,12 +178,34 @@ export const translations: Record<LanguageCode, any> = {
     log_pl: "P/L",
     log_status: "Status",
 
-    // New Login Screen
     welcome_back_title: "Welcome Back",
     welcome_back_subtitle: "The most advanced AI Gold Trading Bot on the market.",
     login_to_account: "Login to your account",
     forgot_password: "Forgot Password?",
-    continue_with: "Or continue with",
-    login_error_message: "Invalid email or password."
+    login_error_message: "Invalid email or password.",
+
+    connect_broker_btn: "Connect to Broker",
+    broker_connect_title: "Connect to Broker",
+    secure_gateway: "Secure Gateway",
+    platform: "Select Platform",
+    server: "Server",
+    account_id: "Account ID",
+    api_key: "API Key",
+    secret_key: "Secret Key",
+    connect_btn: "Connect",
+    processing: "Connecting...",
+    connection_failed: "Connection Failed",
+    check_credentials: "Please check your credentials and try again.",
+    handshake_init: "Initializing handshake with",
+    verifying_creds: "Verifying credentials...",
+    connection_success_title: "Connection Successful",
+    connection_success_msg: "Successfully connected to",
+
+    manual_tp_title: "Manual Take Profit",
+    set_tp_btn: "Set",
+    manual_tp_success_title: "TP Updated",
+    manual_tp_success_msg: "Take Profit for all open trades set to",
+    manual_tp_error_title: "Error",
+    manual_tp_error_msg: "Please enter a valid price."
   }
 };
