@@ -1,16 +1,17 @@
-
 import { LanguageCode } from '../types';
 
 export const translations: Record<LanguageCode, any> = {
   ar: {
     app_title: "GOLD AI PRO",
     login_title: "تسجيل الدخول",
-    register_title: "إنشاء حساب جديد",
+    register_title: "أنشئ حسابك الآن",
+    register_subtitle: "خطوة واحدة تفصلك عن عالم التداول الذكي.",
+    register_branding_title: "بوابة المستقبل المالي",
+    register_branding_subtitle: "انضم إلينا وابدأ في تحقيق أهدافك المالية باستخدام قوة الذكاء الاصطناعي.",
     email: "البريد الإلكتروني",
     password: "كلمة المرور",
-    confirm_password: "تأكيد كلمة المرور",
     login_btn: "تسجيل الدخول",
-    register_btn: "إنشاء حساب",
+    register_btn: "أنشئ حسابي",
     create_account: "ليس لديك حساب؟ سجل الآن",
     have_account: "لديك حساب بالفعل؟ تسجيل الدخول",
     logout: "تسجيل الخروج",
@@ -58,8 +59,10 @@ export const translations: Record<LanguageCode, any> = {
     win_rate: "معدل الربح",
     equity: "سيولة الحساب",
     open_trades: "صفقات مفتوحة",
+    closed_trades: "صفقات مغلقة",
+    total_pl: "إجمالي الربح/الخسارة",
 
-    ai_analysis: "تحليل حركة السعر والسيولة",
+    ai_analysis: "تحليل استراتيجية متعددة الأطر الزمنية",
     suggested_sl: "وقف الخسارة المقترح",
     suggested_tp: "أخذ الربح المقترح",
     live_update: "تحديث مباشر",
@@ -108,12 +111,14 @@ export const translations: Record<LanguageCode, any> = {
   en: {
     app_title: "GOLD AI PRO",
     login_title: "Sign In",
-    register_title: "Create Account",
+    register_title: "Create Your Account",
+    register_subtitle: "Just one step to enter the world of smart trading.",
+    register_branding_title: "Gateway to Your Financial Future",
+    register_branding_subtitle: "Join us and start achieving your financial goals with the power of AI.",
     email: "Email Address",
     password: "Password",
-    confirm_password: "Confirm Password",
     login_btn: "Sign In",
-    register_btn: "Create Account",
+    register_btn: "Create My Account",
     create_account: "Don't have an account? Sign Up",
     have_account: "Already have an account? Sign In",
     logout: "Logout",
@@ -161,8 +166,10 @@ export const translations: Record<LanguageCode, any> = {
     win_rate: "Win Rate",
     equity: "Equity",
     open_trades: "Open Trades",
+    closed_trades: "Closed Trades",
+    total_pl: "Total P/L",
 
-    ai_analysis: "Liquidity & Price Action Analysis",
+    ai_analysis: "Multi-Timeframe Strategy Analysis",
     suggested_sl: "Suggested SL",
     suggested_tp: "Suggested TP",
     live_update: "LIVE",

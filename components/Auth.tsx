@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { MeltedGoldLogo } from './Logo';
 import { LanguageCode } from '../types';
@@ -143,14 +142,11 @@ interface RegisterProps {
 
 export const Register: React.FC<RegisterProps> = ({ onRegister, onLoginClick, lang, setLang }) => {
   const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const t = translations[lang];
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if(password !== confirmPassword) { return; }
     setLoading(true);
     setTimeout(() => {
         setLoading(false);
@@ -160,27 +156,40 @@ export const Register: React.FC<RegisterProps> = ({ onRegister, onLoginClick, la
 
   return (
     <AuthContainer>
-        <div className="p-8 sm:p-12 flex flex-col justify-center col-span-full">
-            <h2 className="text-2xl font-bold text-white mb-6 text-center">{t.register_title}</h2>
+        {/* Left Branding Panel */}
+        <div className="hidden md:flex flex-col items-center justify-center p-12 bg-gradient-to-br from-slate-800/20 to-transparent text-center border-r border-slate-700/50">
+           <MeltedGoldLogo className="w-32 h-32 mx-auto mb-6 drop-shadow-[0_0_20px_rgba(251,191,36,0.6)]" />
+           <h1 className="text-3xl font-bold bg-gradient-to-r from-amber-200 via-amber-400 to-amber-500 bg-clip-text text-transparent mb-2">
+             {t.register_branding_title}
+           </h1>
+           <p className="text-slate-400 max-w-xs">{t.register_branding_subtitle}</p>
+        </div>
+
+        {/* Right Form Panel */}
+        <div className="p-8 sm:p-12 flex flex-col justify-center">
+            <div className="flex justify-between items-start mb-8">
+                <div>
+                    <h2 className="text-2xl font-bold text-white">{t.register_title}</h2>
+                    <p className="text-sm text-slate-400">{t.register_subtitle}</p>
+                </div>
+                <LanguageSelector currentLang={lang} onSelect={setLang} label="" />
+            </div>
+            
             <form onSubmit={handleSubmit} className="space-y-5">
-                <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-1.5">{t.email}</label>
-                    <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="w-full bg-slate-800/50 border border-slate-600 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-amber-500 outline-none transition" />
+                <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" /></svg>
+                    </span>
+                    <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} className="w-full bg-slate-800/50 border border-slate-600 rounded-xl pl-12 pr-4 py-3.5 text-white focus:ring-2 focus:ring-amber-500 outline-none transition" placeholder={t.email} />
                 </div>
-                <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-1.5">{t.password}</label>
-                    <input type="password" required value={password} onChange={(e) => setPassword(e.target.value)} className="w-full bg-slate-800/50 border border-slate-600 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-amber-500 outline-none transition" />
-                </div>
-                <div>
-                    <label className="block text-sm font-medium text-slate-300 mb-1.5">{t.confirm_password}</label>
-                    <input type="password" required value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} className="w-full bg-slate-800/50 border border-slate-600 rounded-xl px-4 py-3 text-white focus:ring-2 focus:ring-amber-500 outline-none transition" />
-                </div>
-                <button type="submit" disabled={loading} className="w-full bg-amber-600 hover:bg-amber-500 text-white font-bold py-3.5 rounded-xl transition flex justify-center items-center h-[50px]">
-                    {loading ? <span className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></span> : t.register_btn}
+
+                <button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-900 font-bold py-4 rounded-xl transition shadow-lg shadow-amber-500/20 flex justify-center items-center h-[54px] text-lg">
+                    {loading ? <span className="w-6 h-6 border-2 border-slate-900 border-t-transparent rounded-full animate-spin"></span> : t.register_btn}
                 </button>
             </form>
-            <div className="mt-6 text-center">
-                <button onClick={onLoginClick} className="text-sm text-slate-400 hover:text-white transition">
+
+            <div className="mt-8 text-center text-sm text-slate-500">
+                <button onClick={onLoginClick} className="hover:text-white transition">
                     {t.have_account}
                 </button>
             </div>

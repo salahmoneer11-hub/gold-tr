@@ -38,6 +38,18 @@ const generateMockUsers = (): UserEntity[] => {
         ip: '192.168.1.1',
         location: 'Admin HQ'
     });
+    mock.push({
+        id: 'user-002',
+        email: 'saas@gmail.com',
+        status: 'ACTIVE',
+        balance: 100000,
+        totalProfit: 0,
+        isOnline: false,
+        lastLogin: Date.now(),
+        plan: 'monthly',
+        ip: '101.102.103.104',
+        location: 'Riyadh, SA'
+    });
     return mock;
 };
 
@@ -85,7 +97,7 @@ const AIAnalysisPanel: React.FC<{ analysis: MarketAnalysis | null, lang: Languag
                 </div>
             </div>
 
-            <div className="bg-slate-900/50 p-3 rounded-lg border border-slate-700 max-h-64 overflow-y-auto custom-scrollbar flex-1">
+            <div className="bg-slate-900/50 p-3 rounded-lg border border-slate-700 max-h-96 overflow-y-auto custom-scrollbar flex-1">
                 <h4 className="text-[10px] text-gray-400 font-bold uppercase tracking-wider mb-2">{t.reasoning}</h4>
                 <p className="text-xs text-gray-300 whitespace-pre-wrap">{reasoning}</p>
             </div>
@@ -138,6 +150,7 @@ const App: React.FC = () => {
 
   const openTrades = trades.filter(t => t.status === 'OPEN');
   const closedTrades = trades.filter(t => t.status === 'CLOSED');
+  const totalClosedProfit = closedTrades.reduce((sum, trade) => sum + trade.profit, 0);
   const openProfit = openTrades.reduce((sum, trade) => sum + trade.profit, 0);
   const accountEquity = (activeUser?.balance || 0) + openProfit;
   const wonTrades = closedTrades.filter(t => t.profit > 0);
@@ -162,9 +175,14 @@ const App: React.FC = () => {
   };
 
   const handleLogin = (email: string, password?: string): boolean => {
-      if (email.toLowerCase() !== ADMIN_EMAIL && password !== 'password') {
-        return false;
+      const userExists = allUsers.some(u => u.email.toLowerCase() === email.toLowerCase());
+      if (!userExists) return false;
+
+      // In this simulation, any password is valid for existing mock users, except for specific "fail" cases.
+      if (password && (password.toLowerCase().includes('fail') || password.toLowerCase().includes('error'))) {
+          return false;
       }
+      
       setCurrentUser(email);
       localStorage.setItem('gold_ai_user_email', email);
       addToast(t.toast_login_success, t.welcome_back, 'success');
@@ -406,9 +424,10 @@ const App: React.FC = () => {
       </header>
 
       <main className="pt-20 px-2 sm:px-4 md:px-6 pb-8 w-full max-w-screen-2xl mx-auto">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
             <MetricCard title={t.equity} value={`$${accountEquity.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`} subValue={`${t.open_trades}: ${openTrades.length}`} icon="💰" />
             <MetricCard title={t.open_profit} value={`${openProfit >= 0 ? '+' : ''}$${openProfit.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`} color={openProfit >= 0 ? 'text-green-400' : 'text-red-400'} icon="📈" />
+            <MetricCard title={t.total_pl} value={`${totalClosedProfit >= 0 ? '+' : ''}$${totalClosedProfit.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`} color={totalClosedProfit >= 0 ? 'text-green-400' : 'text-red-400'} subValue={`${t.closed_trades}: ${closedTrades.length}`} icon="📊" />
             <MetricCard title={t.win_rate} value={`${winRate.toFixed(1)}%`} subValue={`${wonTrades.length}/${closedTrades.length} Won`} color="text-blue-400" icon="🎯" />
             <MetricCard title={t.user_balance} value={`$${activeUser?.balance.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`} icon="🏦" />
         </div>
